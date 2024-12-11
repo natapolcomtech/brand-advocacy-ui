@@ -17,7 +17,7 @@ COPY . .
 
 # build app for production with minification
 RUN npm run build
-COPY .env.dev .env
+COPY .env.prd .env
 
 EXPOSE 3000
 

@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    tags:
+      - 'main-*' # Trigger on tags starting with 'main-' (for main)
+jobs:
+  build-main:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/main-')
+    runs-on: [self-hosted, auto-main]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build Docker image for main
+        run: |
+          echo "Building Docker image for main..."
+          whoami
+          docker build -t ba-application-ui-main -f Dockerfile.prd .
+          docker ps -a  # List all containers for debugging
+
+  deploy-main:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/main-')
+    runs-on: [self-hosted, auto-main]
+    needs: build-main
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Deploy Docker container for main
+        run: |
+          echo "Deploying Docker container for main..."
+          docker rm -f ba-application-ui-main || true
+          docker run -d -p 5555:5555 --restart always \
+            --name ba-application-ui-main \
+            -e ENV_APP=prod \
+            ba-application-ui-main:latest
