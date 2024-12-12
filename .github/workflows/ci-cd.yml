@@ -58,7 +58,7 @@ jobs:
               run: |
                   echo "Deploying Docker container for staging..."
                   docker rm -f ba-application-ui-staging || true
-                  docker run -d -p 15555:3000 --restart always \
+                  docker run -d -p 14444:3000 --restart always \
                     --name ba-application-ui-staging \
                     -e ENV_APP=prod \
                     ba-application-ui-staging:latest
