@@ -74,7 +74,7 @@ jobs:
             - name: Build Docker image for develop
               run: |
                   echo "Building Docker image for develop..."
-                  sudo docker build -t ba-application-ui-develop -f Dockerfile.stg .
+                  sudo docker build -t ba-application-ui-develop -f Dockerfile.dev .
 
     deploy-develop:
         if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/develop-')
