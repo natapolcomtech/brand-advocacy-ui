@@ -4,6 +4,7 @@ on:
     push:
         tags:
             - "main-*" # Trigger on tags starting with 'main-' (for main)
+            - "staging-*" # Trigger on tags starting with 'main-' (for main)
 jobs:
     build-main:
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/main-')
@@ -33,3 +34,31 @@ jobs:
                     --name ba-application-ui-main \
                     -e ENV_APP=prod \
                     ba-application-ui-main:latest
+    build-staging:
+        if: github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/staging-')
+        runs-on: [self-hosted, auto-staging]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Build Docker image for staging
+              run: |
+                  echo "Building Docker image for staging..."
+                  docker build -t ba-application-ui-staging -f Dockerfile.stg .
+
+    deploy-staging:
+        if: github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/staging-')
+        runs-on: [self-hosted, auto-staging]
+        needs: build-staging
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Deploy Docker container for staging
+              run: |
+                  echo "Deploying Docker container for staging..."
+                  docker rm -f ba-application-ui-staging || true
+                  docker run -d -p 15555:3000 --restart always \
+                    --name ba-application-ui-staging \
+                    -e ENV_APP=prod \
+                    ba-application-ui-staging:latest
