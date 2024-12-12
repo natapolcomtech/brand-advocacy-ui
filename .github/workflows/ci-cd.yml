@@ -5,6 +5,7 @@ on:
         tags:
             - "main-*" # Trigger on tags starting with 'main-' (for main)
             - "staging-*" # Trigger on tags starting with 'main-' (for main)
+            - "develop-*" # Trigger on tags starting with 'main-' (for main)
 jobs:
     build-main:
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/main-')
@@ -62,3 +63,32 @@ jobs:
                     --name ba-application-ui-staging \
                     -e ENV_APP=prod \
                     ba-application-ui-staging:latest
+
+    build-develop:
+        if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/develop-')
+        runs-on: [self-hosted, auto-staging]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Build Docker image for develop
+              run: |
+                  echo "Building Docker image for develop..."
+                  sudo docker build -t ba-application-ui-develop -f Dockerfile.stg .
+
+    deploy-develop:
+        if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/develop-')
+        runs-on: [self-hosted, auto-staging]
+        needs: build-develop
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Deploy Docker container for develop
+              run: |
+                  echo "Deploying Docker container for develop..."
+                  sudo docker rm -f ba-application-ui-develop || true
+                  sudo docker run -d -p 13333:3000 --restart always \
+                    --name ba-application-ui-develop \
+                    -e ENV_APP=prod \
+                    ba-application-ui-develop:latest
