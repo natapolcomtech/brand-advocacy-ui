@@ -16,7 +16,7 @@ jobs:
             - name: Build Docker image for main
               run: |
                   echo "Building Docker image for main..."
-                  docker build -t ba-application-ui-main -f Dockerfile.prd .
+                  sudo docker build -t ba-application-ui-main -f Dockerfile.prd .
 
     deploy-main:
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/main-')
@@ -29,8 +29,8 @@ jobs:
             - name: Deploy Docker container for main
               run: |
                   echo "Deploying Docker container for main..."
-                  docker rm -f ba-application-ui-main || true
-                  docker run -d -p 15555:3000 --restart always \
+                  sudo docker rm -f ba-application-ui-main || true
+                  sudo docker run -d -p 15555:3000 --restart always \
                     --name ba-application-ui-main \
                     -e ENV_APP=prod \
                     ba-application-ui-main:latest
@@ -44,7 +44,7 @@ jobs:
             - name: Build Docker image for staging
               run: |
                   echo "Building Docker image for staging..."
-                  docker build -t ba-application-ui-staging -f Dockerfile.stg .
+                  sudo docker build -t ba-application-ui-staging -f Dockerfile.stg .
 
     deploy-staging:
         if: github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/staging-')
@@ -57,8 +57,8 @@ jobs:
             - name: Deploy Docker container for staging
               run: |
                   echo "Deploying Docker container for staging..."
-                  docker rm -f ba-application-ui-staging || true
-                  docker run -d -p 14444:3000 --restart always \
+                  sudo docker rm -f ba-application-ui-staging || true
+                  sudo docker run -d -p 14444:3000 --restart always \
                     --name ba-application-ui-staging \
                     -e ENV_APP=prod \
                     ba-application-ui-staging:latest
