@@ -1,12 +1,12 @@
 import { defineStore } from "pinia"
 import { ApiService } from "@/services/apiService"
-import type { AnyFn } from "@vueuse/core"
 
 export const useSystemMasterData = defineStore("systemMasterData", {
 	state: (): {
 		systemData: any
 		systemDataOptions: any
 		mapSystemOptions: any
+		topics: any
 	} => ({
 		systemData: [],
 		systemDataOptions: [],
@@ -19,7 +19,8 @@ export const useSystemMasterData = defineStore("systemMasterData", {
 			review_status_option: [],
 			review_type_option: [],
 			telephone_options: []
-		}
+		},
+		topics:[]
 	}),
 	actions: {
 		async getSystemMasterData() {
@@ -117,6 +118,39 @@ export const useSystemMasterData = defineStore("systemMasterData", {
 					break
 				default:
 					break
+			}
+		},
+		async getTopicMasterData(params: any) {
+			try {
+				const resp = await ApiService.v1.SystemMasterData.getTopicMasterData(params)
+				this.topics = resp?.data
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async createTopicMasterData(data: any) {
+			try {
+				const resp = await ApiService.v1.SystemMasterData.postTopicMasterData(data)
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async updateTopicMasterData(data: any) {
+			try {
+				const resp = await ApiService.v1.SystemMasterData.updateTopicMasterData(data)
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async deleteTopicMasterData(id: number) {
+			try {
+				const resp = await ApiService.v1.SystemMasterData.deleteTopicMasterData(id)
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
 			}
 		}
 	}

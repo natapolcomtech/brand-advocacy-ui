@@ -1,5 +1,6 @@
 /// setup axios
 import axios from "axios"
+import router from "@/router"
 /// create axios instance
 const axiosIns = axios.create({
 	baseURL: `${import.meta.env.VITE_API_URL_BA_APP || ""}`
@@ -67,6 +68,13 @@ axiosIns.interceptors.response.use(
         duration: 2500,
         keepAliveOnHover: true
       })
+    }
+    console.log(error)
+    if (error.status === 401) {
+      console.log('ghs',error)
+      // Redirect to logout page
+      localStorage.clear()
+      return window.location.href = "/login"
     }
     // Return error
     return Promise.reject(error)

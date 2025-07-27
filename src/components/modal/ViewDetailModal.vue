@@ -61,7 +61,6 @@ export default defineComponent({
                 emit('update:isModalManagement', { ...props.isModalManagement, value: newValue });
             }
         });
-        console.log('modalVisiblexx',modalVisible.value);
         watch(() => props.isModalManagement.value, (newValue) => {
             modalVisible.value = newValue;
         });

@@ -13,7 +13,7 @@
 					<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
 				</template>
 			</n-input>
-			<n-button @click="handleCreateTeam" type="primary" size="large">
+			<n-button v-if="checkPermission(['um-manage-all'])" @click="handleCreateTeam" type="primary" size="large">
 				<template #icon>
 					<Icon icon="icons8:plus" />
 				</template>
@@ -26,6 +26,7 @@
 			:columns="column"
 			:data="teamManagementStore.teams.data"
 			@update:checked-row-keys="handleCheck"
+			scroll-x-auto
 		/>
 
 		<n-pagination
@@ -172,6 +173,7 @@ import { useMasterDataStore } from "@/stores/useMasterDataStore"
 import { MODAL_TYPE } from "@/views/UserManagement/User/index.vue"
 import { TEAM_OPTIONS, PAGE_SIZES } from "@/components/utils/constants"
 import _ from "lodash"
+import { checkPermission } from "@/utils/auth"
 interface RowData {
 	id: number
 	key?: number
@@ -366,12 +368,14 @@ export default defineComponent({
 				{
 					title: "Team Name",
 					key: "name",
-					width: "250px"
+					width: "250px",
+					className: "whitespace-nowrap",
 				},
 				{
 					title: "Users",
 					key: "team_members",
 					width: "250px",
+					className: "whitespace-nowrap",
 					render(row: RowData) {
 						const options = Array.isArray(row.team_member)
 							? row.team_member.map(member => ({
@@ -431,10 +435,10 @@ export default defineComponent({
 				{
 					title: "Active",
 					key: "is_active",
-					className: "!text-center",
+					className: "!text-center whitespace-nowrap",
 					render(row) {
 						return h(NSwitch, {
-							modelValue: row.is_active === 1,
+							value: row.is_active === 1 ? true : false,
 							disabled: true
 						})
 					}
@@ -463,7 +467,7 @@ export default defineComponent({
 									isModalManagement.event = MODAL_TYPE.VIEW
 								}
 							}),
-							h(Icon, {
+							checkPermission(["um-manage-all"]) && h(Icon, {
 								icon: "flowbite:edit-outline",
 								class: "w-6 h-6 cursor-pointer",
 								onClick: async (e: MouseEvent) => {
@@ -481,7 +485,7 @@ export default defineComponent({
 									isModalManagement.event = MODAL_TYPE.EDIT
 								}
 							}),
-							h(Icon, {
+							checkPermission(["um-manage-all"]) && h(Icon, {
 								icon: "mdi:shield-key-outline",
 								class: "w-6 h-6 cursor-pointer",
 								onClick: async (e: MouseEvent) => {
@@ -500,12 +504,11 @@ export default defineComponent({
 										formulas: formulas,
 										team_id: row.id
 									})
-
 									isModalManagement.value = true
 									isModalManagement.event = MODAL_TYPE.PERMISSION
 								}
 							}),
-							h(Icon, {
+							checkPermission(["um-manage-all"]) && h(Icon, {
 								icon: "tabler:trash",
 								class: "w-6 h-6 cursor-pointer",
 								onClick: () => {
@@ -562,24 +565,7 @@ export default defineComponent({
 				{
 					class: "flex justify-between items-center"
 				},
-				[
-					h("div", {}, [option.label as string])
-					// h(
-					// 	NButton,
-					// 	{
-					// 		size: "tiny",
-					// 		type: "error",
-					// 		circle: true,
-					// 		class: "!text-[8px] !w-[16px] !h-[16px] !text-center",
-					// 		onClick: e => {
-					// 			e.stopPropagation()
-					// 		}
-					// 	},
-					// 	{
-					// 		default: () => option.is_active
-					// 	}
-					// )
-				]
+				[h("div", {}, [option.label as string])]
 			)
 		}
 
@@ -588,23 +574,17 @@ export default defineComponent({
 				required: true,
 				trigger: ["blur", "input"],
 				message: "Please input Team"
-			},
-			userTeam: {
-				required: true,
-				trigger: ["blur", "change"],
-				message: "Please select user",
-				validator: (rule, value) => {
-					if (!value || value.length === 0) {
-						return new Error("Please select user")
-					}
-					return true
-				}
 			}
 		}
 
 		onMounted(async () => {
+			const filter = {
+				page: 1,
+				limit: 100,
+				filter: ""
+			}
 			await teamManagementStore.getTeams({ ...pagination, ...filterApi })
-			await userManagementStore.getUsers({ ...pagination, ...filterApi })
+			await userManagementStore.getUsers({ ...pagination, ...filter })
 			selectUsers.value = userManagementStore.users.data.map((user: any) => ({
 				value: user.id,
 				label: `${user.firstname} ${user.lastname}`
@@ -665,35 +645,35 @@ export default defineComponent({
 			return dataTeam.formulas.some(formula => formula.formula_id === formula_id)
 		}
 		async function handleUpdate(formula_id: number, checked: any) {
-      const formula = productOption.value
-        .flatMap((option: any) => option.formulas)
-        .find((f: any) => f.formula_id === formula_id);
+			const formula = productOption.value
+				.flatMap((option: any) => option.formulas)
+				.find((f: any) => f.formula_id === formula_id)
 
-      if (checked) {
-        dataTeam.formulas.push({
-          formula_id,
-          brand_id: formula.brand_id,
-          brand_name: "",
-          formula_name: "",
-          formula_description: ""
-        });
-        await teamManagementStore.postTeamAssign({
-          team_id: dataTeam.team_id,
-          formula_id: formula_id,
-          brand_id: formula.brand_id,
-        });
-      } else {
-        const index = dataTeam.formulas.findIndex(formula => formula.formula_id === formula_id);
-        if (index > -1) {
-          dataTeam.formulas.splice(index, 1);
-        }
-        await teamManagementStore.postTeamUnAssign({
-          team_id: dataTeam.team_id,
-          formula_id: formula_id,
-          brand_id: formula.brand_id,
-        });
-      }
-    }
+			if (checked) {
+				dataTeam.formulas.push({
+					formula_id,
+					brand_id: formula.brand_id,
+					brand_name: "",
+					formula_name: "",
+					formula_description: ""
+				})
+				await teamManagementStore.postTeamAssign({
+					team_id: dataTeam.team_id,
+					formula_id: formula_id,
+					brand_id: formula.brand_id
+				})
+			} else {
+				const index = dataTeam.formulas.findIndex(formula => formula.formula_id === formula_id)
+				if (index > -1) {
+					dataTeam.formulas.splice(index, 1)
+				}
+				await teamManagementStore.postTeamUnAssign({
+					team_id: dataTeam.team_id,
+					formula_id: formula_id,
+					brand_id: formula.brand_id
+				})
+			}
+		}
 		return {
 			PAGE_SIZES,
 			TEAM_OPTIONS,
@@ -726,7 +706,9 @@ export default defineComponent({
 			brandOption,
 			productOption,
 			isChecked,
-			handleUpdate
+			handleUpdate,
+			// onScroll,
+			checkPermission
 		}
 	}
 })

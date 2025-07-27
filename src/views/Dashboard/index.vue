@@ -64,6 +64,7 @@
 				:columns="columns"
 				:data="data"
 				:pagination="pagination"
+				scroll-x-auto
 			/>
 			<n-tabs type="line" animated>
 				<n-tab-pane name="oasis" tab="Oasis">Wonderwall</n-tab-pane>

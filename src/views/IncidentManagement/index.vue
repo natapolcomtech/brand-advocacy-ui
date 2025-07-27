@@ -1,8 +1,27 @@
 <template>
 	<div>
 		<h1>Incident Management</h1>
-		<div class="mb-6 mt-4 flex flex-col md:flex-row justify-between gap-4">
-			<div class="flex gap-4">
+		<div class="mb-6 mt-4 flex flex-col w-full gap-4">
+			<n-space justify="end">
+				<n-button @click="handleExportIncident" type="success" size="large" class="">
+					<template #icon>
+						<Icon icon="typcn:export-outline" />
+					</template>
+					Export Incident
+				</n-button>
+				<n-button
+					v-if="checkPermission(['im-manage-all', 'im-case-create'])"
+					@click="handleCreateIncident"
+					type="primary"
+					size="large"
+				>
+					<template #icon>
+						<Icon icon="icons8:plus" />
+					</template>
+					Create Incident
+				</n-button>
+			</n-space>
+			<div class="flex flex-col md:flex-row w-full gap-4">
 				<n-input
 					:on-update:value="value => handleSearch(value, 'input')"
 					type="text"
@@ -14,6 +33,16 @@
 						<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
 					</template>
 				</n-input>
+				<n-select
+					:on-update:value="value => handleSearch(value, 'status_case')"
+					class="md:!w-[260px]"
+					size="large"
+					:render-label="renderLabelCase"
+					:render-tag="renderSelectCase"
+					:options="INCIDENT_MANAGEMENT.CASE_OPTIONS"
+					placeholder="Please Select Status Case"
+					clearable
+				/>
 
 				<n-select
 					:on-update:value="value => handleSearch(value, 'feedback_type')"
@@ -23,29 +52,26 @@
 					:render-tag="renderSelectTypeFeedback"
 					:options="INCIDENT_MANAGEMENT.INCIDENT_TYPE_OPTIONS"
 					placeholder="Please Select Type Incident"
-				/>
-				<n-select
-					:on-update:value="value => handleSearch(value, 'status_case')"
-					class="md:!w-[260px]"
-					size="large"
-					:render-label="renderLabelCase"
-					:render-tag="renderSelectCase"
-					:options="INCIDENT_MANAGEMENT.CASE_OPTIONS"
-					placeholder="Please Select Status Case"
+					clearable
 				/>
 			</div>
-			<n-button @click="handleCreateIncident" type="primary" size="large">
-				<template #icon>
-					<Icon icon="icons8:plus" />
-				</template>
-				Create Incident
-			</n-button>
+
+			<n-space>
+				<n-date-picker
+					v-model:value="filterApi.date"
+					type="datetimerange"
+					clearable
+					size="large"
+					class="md:!w-[535px] !w-full"
+				/>
+			</n-space>
 		</div>
 		<n-data-table
 			:row-key="rowKey"
 			:columns="column"
 			:data="incidentManagementStore.incidents.data"
 			@update:checked-row-keys="handleCheck"
+			scroll-x-auto
 		/>
 		<n-pagination
 			:item-count="itemCount"
@@ -59,6 +85,7 @@
 				<div class="hidden md:block">({{ startIndex + 1 }} - {{ paginateCount }}) Of {{ itemCount }} items</div>
 			</template>
 		</n-pagination>
+
 		<n-modal v-if="isModalManagement.event === MODAL_TYPE.CREATE" v-model:show="isModalManagement.value">
 			<n-card
 				:bordered="false"
@@ -79,11 +106,14 @@
 					<n-grid :x-gap="12" cols="1 600:5" item-responsive>
 						<n-gi span="2">
 							<n-form-item label="Topic" path="topic">
-								<n-input
-									type="text"
-									v-model:value="incidentForm.topic"
-									placeholder="Enter Topic"
+								<n-select
 									size="large"
+									placeholder="Please Select Topic"
+									v-model:value="incidentForm.topic"
+									:render-label="renderLabel"
+									:render-tag="renderMultipleSelectTag"
+									:options="topicsOption"
+									filterable
 								/>
 							</n-form-item>
 						</n-gi>
@@ -132,15 +162,16 @@
 						</n-gi>
 						<n-gi span="3">
 							<n-form-item label="Team" path="team_id">
-								<n-tree-select
+								<n-select
 									:options="teamAndBa.team_options"
 									size="large"
 									v-model:value="selectedCandidates"
 									placeholder="Please Select Team"
 									multiple
-									default-expand-all
-									show-path
-									@update:value="handleUpdateValue"
+									filterable
+									:render-label="renderLabel"
+									:render-tag="renderMultipleSelectTag"
+									@update-value="handleUpdateValue"
 								/>
 							</n-form-item>
 						</n-gi>
@@ -189,6 +220,29 @@
 							</n-form-item>
 						</n-gi>
 						<n-gi span="1 600:2">
+							<n-form-item label="Date Post" path="date_post">
+								<n-date-picker
+									size="large"
+									v-model:value="incidentForm.date_post"
+									type="date"
+									class="w-full"
+									format="dd/MM/yyyy"
+								/>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1 600:3">
+							<n-form-item label="Type Close Incident Case" path="type_incident_after">
+								<n-select
+									size="large"
+									v-model:value="incidentForm.type_incident_after"
+									:render-label="renderLabelTypeFeedback"
+									:render-tag="renderSelectTypeFeedback"
+									:options="INCIDENT_MANAGEMENT.INCIDENT_TYPE_OPTIONS"
+									:disabled="incidentForm.status_incident !== 3"
+								/>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1 600:2">
 							<n-form-item label="Type Incident Case" path="type_incident_before">
 								<n-select
 									size="large"
@@ -199,16 +253,40 @@
 								/>
 							</n-form-item>
 						</n-gi>
-						<n-gi span="5">
-							<n-form-item label="Type Close Incident Case" path="type_incident_after">
-								<n-select
-									size="large"
-									v-model:value="incidentForm.type_incident_after"
-									:render-label="renderLabelTypeFeedback"
-									:render-tag="renderSelectTypeFeedback"
-									:options="INCIDENT_MANAGEMENT.INCIDENT_TYPE_OPTIONS"
-									:disabled="incidentForm.status_incident !== 3"
-								/>
+						<n-gi span="2">
+							<n-form-item label="Like" path="like">
+								<n-input-number v-model:value="incidentForm.like_amount" class="w-full" placeholder="Please Enter Like"  :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1">
+							<n-form-item label="Share" path="share">
+								<n-input-number v-model:value="incidentForm.view_amount" class="w-full" placeholder="Please Enter Share"  :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="2">
+							<n-form-item label="view" path="view">
+								<n-input-number v-model:value="incidentForm.share_amount" class="w-full" placeholder="Please Enter View"  :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
 							</n-form-item>
 						</n-gi>
 						<n-gi span="3">
@@ -236,7 +314,7 @@
 				<div v-for="(items, teamIndex) in incidentForm.candidate" :key="teamIndex">
 					<n-card v-if="items.team_id !== 0" class="!rounded-xl !border-[#DADADA] mt-2">
 						<n-space class="mb-4" justify="space-between">
-							<span class="flex gap-2">
+							<span class="flex gap-2 justify-center items-center">
 								<h4 class="text-[#2073DE]">Team</h4>
 								<n-tag v-if="items.team_id" round type="success" class="!bg-[#2B405B]">
 									Team : {{ items.team_name }}
@@ -245,11 +323,29 @@
 
 							<Icon
 								class="cursor-pointer"
-								@click="deleteTeamWithIndex(teamIndex, false)"
+								@click="deleteTeamWithIndex(items.team_id, teamIndex, false)"
 								icon="charm:circle-cross"
 								width="24"
 								height="24"
 								style="color: #fe4c4c"
+							/>
+						</n-space>
+						<n-space class="items-center mb-4">
+							<n-checkbox
+								:checked="items.checkBox"
+								@update:checked="value => handleCheckboxChange(value, items.team_id)"
+							>
+								Assign Admin User
+							</n-checkbox>
+							<n-select
+								placeholder="Please Select User"
+								v-model:value="items.users"
+								:render-label="renderLabel"
+								:render-tag="renderMultipleSelectTag"
+								:options="items.teamAndUserOptions"
+								multiple
+								class="md:!w-[400px]"
+								:disabled="!items.checkBox"
 							/>
 						</n-space>
 
@@ -302,12 +398,26 @@
 										<img class="m-auto" src="/images/icon/vector.svg" alt="vector" />
 									</n-form-item>
 								</n-gi>
+								<n-gi span="2 600:5">
+									<n-form-item label="Topic" path="topic">
+										<n-select
+											size="large"
+											placeholder="Please Select Topic"
+											v-model:value="item.topic"
+											:render-label="renderLabel"
+											:render-tag="renderMultipleSelectTag"
+											:options="topicsOption"
+											multiple
+											filterable
+										/>
+									</n-form-item>
+								</n-gi>
 							</n-grid>
 						</n-form>
 
 						<template #footer>
 							<n-button
-								@click="handleOpenModalRandom(items.team_id)"
+								@click="handleOpenModalRandom(items.team_id, teamIndex)"
 								class="!w-full"
 								type="primary"
 								size="large"
@@ -315,7 +425,7 @@
 								<template #icon>
 									<Icon icon="icons8:plus" />
 								</template>
-								Random BA
+								Add BA
 							</n-button>
 						</template>
 					</n-card>
@@ -370,43 +480,47 @@
 			</n-space>
 			<n-space class="mt-8" vertical>
 				<h4>ทีม</h4>
-				<p class="mt-2 pl-5">{{ incidentForm.team_name }}</p>
+				<p class="mt-2 pl-5">{{ incidentForm.team_name ? incidentForm.team_name : "-" }}</p>
 			</n-space>
 			<n-space class="mt-8 mb-2" vertical>
 				<h4>ยี่ห้อผลิตภัณฑ์ (Product)</h4>
-				<p v-for="(item, index) in incidentForm.formulas" :key="index" class="flex flex-col gap-1 pl-5">
-					{{ item.brand }}
+				<p class="flex flex-col gap-1 pl-5">
+					{{ incidentForm.formulas.brand.name ? incidentForm.formulas.brand.name : "-" }}
 				</p>
 			</n-space>
 			<n-space class="mt-8 border-b pb-4" vertical>
 				<h4>สูตรนมผง (Formula)</h4>
-				<span v-for="(item, index) in incidentForm.formulas" :key="index">
+				<span>
 					<ul class="flex flex-col pl-5">
 						<li>
-							<p>{{ item.formula }}</p>
+							{{ incidentForm.formulas.name ? incidentForm.formulas.name : "-" }}
 						</li>
-						<p class="text-sm text-[#858C94]">{{ item.description ?? "-" }}</p>
+						<p class="text-sm text-[#858C94]">
+							{{ incidentForm.formulas.description ? incidentForm.formulas.description : "-" }}
+						</p>
 					</ul>
 				</span>
 			</n-space>
 			<n-space class="mt-8" vertical>
-				<div class="grid grid-cols-1 md:grid-cols-2 w-[300px] gap-y-4">
-					<p class="text-sm text-[#9CA3AF]">Team</p>
-					<span class="flex gap-2">
-						<p class="whitespace-nowrap truncate max-w-[200px] md:max-w-[300px]">
-							{{ incidentForm.team_name }}
-						</p>
+				<div class="flex flex-col gap-y-4">
+					<span class="md:flex gap-2">
+						<p class="text-sm text-[#9CA3AF] w-[150px]">Team</p>
+						<span>
+							<p class="whitespace-normal mt-2 md:mt-0">
+								{{ incidentForm.team_name ?? "-" }}
+							</p>
+						</span>
 					</span>
 
 					<div
-						class="flex col-span-2"
+						class="md:flex gap-y-4"
 						v-for="(name, index) in incidentForm?.incidentBrandAdvocacys.filter(
 							name => name?.brandAdvocacy?.candidate
 						)"
 						:key="index"
 					>
-						<p class="text-sm text-[#9CA3AF]">Assignee BA</p>
-						<div class="flex gap-2 ml-[70px]">
+						<p class="text-sm text-[#9CA3AF] w-[150px]">Assignee BA</p>
+						<div class="flex gap-2 mt-2 md:mt-0">
 							<n-avatar
 								class="!w-5 !h-5 rounded-full"
 								:style="{
@@ -449,11 +563,14 @@
 					<n-grid :x-gap="12" cols="1 600:5" item-responsive>
 						<n-gi span="2">
 							<n-form-item label="Topic" path="topic">
-								<n-input
-									type="text"
-									v-model:value="incidentForm.topic"
-									placeholder="Enter Topic"
+								<n-select
 									size="large"
+									placeholder="Please Select Topic"
+									v-model:value="incidentForm.topic"
+									:render-label="renderLabel"
+									:render-tag="renderMultipleSelectTag"
+									:options="topicsOption"
+									filterable
 								/>
 							</n-form-item>
 						</n-gi>
@@ -502,15 +619,16 @@
 						</n-gi>
 						<n-gi span="3">
 							<n-form-item label="Team" path="team_id">
-								<n-tree-select
+								<n-select
 									:options="teamAndBa.team_options"
 									size="large"
 									v-model:value="selectedCandidates"
 									placeholder="Please Select Team"
 									multiple
-									default-expand-all
-									show-path
-									@update:value="handleUpdateValue"
+									filterable
+									:render-label="renderLabel"
+									:render-tag="renderMultipleSelectTag"
+									@update-value="handleUpdateValue"
 								/>
 							</n-form-item>
 						</n-gi>
@@ -558,6 +676,29 @@
 							</n-form-item>
 						</n-gi>
 						<n-gi span="1 600:2">
+							<n-form-item label="Date Post" path="date_post">
+								<n-date-picker
+									size="large"
+									v-model:value="incidentForm.date_post"
+									type="date"
+									class="w-full"
+									format="dd/MM/yyyy"
+								/>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1 600:3">
+							<n-form-item label="Type Close Incident Case" path="type_incident_after">
+								<n-select
+									size="large"
+									v-model:value="incidentForm.type_incident_after"
+									:render-label="renderLabelTypeFeedback"
+									:render-tag="renderSelectTypeFeedback"
+									:options="INCIDENT_MANAGEMENT.INCIDENT_TYPE_OPTIONS"
+									:disabled="incidentForm.status_incident !== 3"
+								/>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1 600:2">
 							<n-form-item label="Type Incident Case" path="type_incident_before">
 								<n-select
 									size="large"
@@ -568,16 +709,40 @@
 								/>
 							</n-form-item>
 						</n-gi>
-						<n-gi span="5">
-							<n-form-item label="Type Close Incident Case" path="type_incident_after">
-								<n-select
-									size="large"
-									v-model:value="incidentForm.type_incident_after"
-									:render-label="renderLabelTypeFeedback"
-									:render-tag="renderSelectTypeFeedback"
-									:options="INCIDENT_MANAGEMENT.INCIDENT_TYPE_OPTIONS"
-									:disabled="incidentForm.status_incident !== 3"
-								/>
+						<n-gi span="2">
+							<n-form-item label="Like" path="like">
+								<n-input-number v-model:value="incidentForm.like_amount" class="w-full" placeholder="Please Enter Like" :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="1">
+							<n-form-item label="Share" path="share">
+								<n-input-number v-model:value="incidentForm.view_amount" class="w-full" placeholder="Please Enter Share" :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
+							</n-form-item>
+						</n-gi>
+						<n-gi span="2">
+							<n-form-item label="view" path="view">
+								<n-input-number v-model:value="incidentForm.share_amount" class="w-full" placeholder="Please Enter View" :min="0" size="large">
+									<template #minus-icon >
+										<Icon icon="bi:dash-circle" width="24" height="24" class="mr-1"/> 
+									</template>
+									<template #add-icon>
+										<Icon icon="simple-line-icons:plus" width="24" height="24" class="ml-1"/>
+									</template>
+								</n-input-number>
 							</n-form-item>
 						</n-gi>
 						<n-gi span="3">
@@ -604,7 +769,7 @@
 				</n-form>
 
 				<div v-for="(items, teamIndex) in incidentForm.candidate" :key="teamIndex">
-					<n-card v-if="items.team_id !== 0" class="!rounded-xl !border-[#DADADA] mt-2">
+					<n-card v-if="items.is_delete !== 1" class="!rounded-xl !border-[#DADADA] mt-2">
 						<n-space class="mb-4" justify="space-between">
 							<span class="flex gap-2">
 								<h4 class="text-[#2073DE]">Team</h4>
@@ -615,69 +780,101 @@
 
 							<Icon
 								class="cursor-pointer"
-								@click="deleteTeamWithIndex(teamIndex, true)"
+								@click="deleteTeamWithIndex(items.team_id, teamIndex, true)"
 								icon="charm:circle-cross"
 								width="24"
 								height="24"
 								style="color: #fe4c4c"
 							/>
 						</n-space>
-
-						<n-form
-							v-for="(item, index) in items.ba.filter(item => item.is_delete === 0)"
-							:key="index"
-							ref="formRef"
-							inline
-							:model="incidentForm"
-							:rules="rules"
-						>
-							<n-grid :x-gap="12" cols="2 600:8" item-responsive>
-								<n-gi span="2 600:1">
-									<n-form-item label="No." path="no_id">
-										<n-input
-											size="large"
-											:value="(index + 1).toString()"
-											type="text"
-											disabled
-											class="!bg-[#E5E7EB]"
-										/>
-									</n-form-item>
-								</n-gi>
-								<n-gi span="2 600:4">
-									<n-form-item label="Name" path="name">
-										<n-input
-											size="large"
-											v-model:value="item.name"
-											type="text"
-											placeholder="Enter Name"
-										/>
-									</n-form-item>
-								</n-gi>
-								<n-gi span="1 600:2">
-									<n-form-item label="Point Case" path="point_case">
-										<n-input
-											size="large"
-											v-model:value="item.point_case"
-											type="text"
-											:disabled="incidentForm.status_incident !== 3"
-											:class="` ${incidentForm.status_incident !== 3 ? '!bg-[#E5E7EB]' : ''} `"
-										/>
-									</n-form-item>
-								</n-gi>
-								<n-gi>
-									<n-form-item
-										class="cursor-pointer"
-										@click="deleteBaWithIndex(teamIndex, index, true)"
-									>
-										<img class="m-auto" src="/images/icon/vector.svg" alt="vector" />
-									</n-form-item>
-								</n-gi>
-							</n-grid>
-						</n-form>
-
+						<n-space class="items-center mb-4">
+							<n-checkbox
+								:checked="items.checkBox"
+								@update:checked="value => handleCheckboxChange(value, items.team_id)"
+							>
+								Assign Admin User
+							</n-checkbox>
+							<n-select
+								placeholder="Please Select User"
+								v-model:value="items.users"
+								:render-label="renderLabel"
+								:render-tag="renderMultipleSelectTag"
+								:options="items.teamAndUserOptions"
+								multiple
+								class="md:!w-[400px]"
+								:disabled="!items.checkBox"
+								@update:value="handleAssignUsers($event, teamIndex)"
+							/>
+						</n-space>
+						<div v-for="(item, index) in items.ba" :key="index">
+							<n-form
+								v-if="item.is_delete === 0"
+								ref="formRef"
+								inline
+								:model="incidentForm"
+								:rules="rules"
+							>
+								<n-grid :x-gap="12" cols="2 600:8" item-responsive>
+									<n-gi span="2 600:1">
+										<n-form-item label="No." path="no_id">
+											<n-input
+												size="large"
+												:value="(index + 1).toString()"
+												type="text"
+												disabled
+												class="!bg-[#E5E7EB]"
+											/>
+										</n-form-item>
+									</n-gi>
+									<n-gi span="2 600:4">
+										<n-form-item label="Name" path="name">
+											<n-input
+												size="large"
+												v-model:value="item.name"
+												type="text"
+												placeholder="Enter Name"
+											/>
+										</n-form-item>
+									</n-gi>
+									<n-gi span="1 600:2">
+										<n-form-item label="Point Case" path="point_case">
+											<n-input
+												size="large"
+												v-model:value="item.point_case"
+												type="text"
+												:disabled="incidentForm.status_incident === 1"
+												:class="` ${incidentForm.status_incident === 1 ? '!bg-[#E5E7EB]' : ''} `"
+											/>
+										</n-form-item>
+									</n-gi>
+									<n-gi>
+										<n-form-item
+											class="cursor-pointer"
+											@click="deleteBaWithIndex(teamIndex, index, true)"
+										>
+											<img class="m-auto" src="/images/icon/vector.svg" alt="vector" />
+										</n-form-item>
+									</n-gi>
+									<n-gi span="2 600:5">
+										<n-form-item label="Topic" path="topic">
+											<n-select
+												size="large"
+												placeholder="Please Select Topic"
+												v-model:value="item.topic"
+												:render-label="renderLabel"
+												:render-tag="renderMultipleSelectTag"
+												:options="topicsOption"
+												multiple
+												filterable
+											/>
+										</n-form-item>
+									</n-gi>
+								</n-grid>
+							</n-form>
+						</div>
 						<template #footer>
 							<n-button
-								@click="handleOpenModalRandom(items.team_id)"
+								@click="handleOpenModalRandom(items.team_id, teamIndex)"
 								class="!w-full"
 								type="primary"
 								size="large"
@@ -685,7 +882,7 @@
 								<template #icon>
 									<Icon icon="icons8:plus" />
 								</template>
-								Random BA
+								Add BA
 							</n-button>
 						</template>
 					</n-card>
@@ -701,41 +898,42 @@
 			:style="{
 				width: '800px'
 			}"
-			title="Random BA"
+			title="Selected BA"
 			:bordered="false"
+			@close="handleCloseSelectedBa"
 		>
 			<n-grid :x-gap="12" cols="1" item-responsive>
 				<n-gi>
-					<n-form-item label="Number BA" path="amount">
+					<n-form-item label="Number Of BA" path="no">
 						<n-select
+							:options="numberOfBaOptions"
 							size="large"
-							v-model:value="incidentForm.amount"
+							placeholder="Please Select Number Of BA"
+							filterable
 							:render-label="renderLabel"
 							:render-tag="renderMultipleSelectTag"
-							:options="INCIDENT_MANAGEMENT.RANDOM_BA"
+							v-model:value="selectedBa.no"
+							@update-value="handleUpdateValueBaNo"
 						/>
 					</n-form-item>
 				</n-gi>
 				<n-gi>
-					<div class="flex justify-between items-end">
-						<label for="">Assignee BA</label>
-						<n-button @click="handleRandomBa()" size="small" type="error">
-							<template #icon>
-								<Icon icon="flowbite:refresh-outline" width="24" height="24" style="color: #fff" />
-							</template>
-							Regenerate
-						</n-button>
-					</div>
-					<n-form-item path="all_ba" class="-mt-4">
+					<n-form-item label="BA List" path="amount">
 						<n-select
-							id="selection-multiple"
+							:options="
+								teamAndBa.team_options
+									.flatMap(option => option.ba)
+									.filter(ba => ba.team_id === selectedBa.team_id)
+							"
 							size="large"
-							v-model:value="incidentForm.all_ba"
-							:render-label="renderLabel"
-							:render-tag="renderMultipleSelectTagPoint"
-							:options="randomBaOptions"
+							placeholder="Please Select BA"
 							multiple
-							disabled
+							filterable
+							:render-label="renderLabel"
+							:render-tag="renderMultipleSelectTag"
+							@update-value="handleUpdateValueBa"
+							v-model:value="selectedBa.key"
+							:disabled="(selectedBa.key?.length ?? 0) >= (selectedBa.no ?? 0)"
 						/>
 					</n-form-item>
 				</n-gi>
@@ -761,7 +959,11 @@ import {
 	NTag,
 	NCard,
 	NTreeSelect,
-	NAvatar
+	NAvatar,
+	useDialog,
+	NDatePicker,
+	NCheckbox,
+	NInputNumber
 } from "naive-ui"
 import { Icon } from "@iconify/vue"
 import { useTeamManagementStore } from "@/stores/useTeamManagementStore"
@@ -784,6 +986,8 @@ import type { FormInst, FormRules } from "naive-ui"
 import { toRaw } from "vue"
 import { useRouter } from "vue-router"
 import _ from "lodash"
+import { checkPermission } from "@/utils/auth"
+import moment from "moment"
 interface RowData {
 	id: number
 	key?: number
@@ -805,8 +1009,35 @@ interface RowData {
 	description_before: string
 	description_after: string
 	owner_link: string
+	created_at: string
+	incidentTeams: { team: { name: string } }[]
+	formulas: { brand: string; formula: string; description: string }[]
+	date_post: string
+	like_amount: number
+	share_amount: number
+	view_amount: number
 }
-
+interface Ba {
+	name: string
+	point_case: string
+	brand_advocacy_id: number
+	is_active: number
+	is_delete: number
+	topic: []
+}
+interface TeamOption {
+	label: string
+	value: number
+	ba: Array<{
+		label: string
+		value: number
+		team_id: number
+		team_name: string
+		is_active: number
+		is_delete: number
+		topic: []
+	}>
+}
 export default defineComponent({
 	name: "IncidentManagement",
 	components: {
@@ -825,13 +1056,17 @@ export default defineComponent({
 		NTreeSelect,
 		NCard,
 		NAvatar,
-		Icon
+		NDatePicker,
+		NCheckbox,
+		Icon,
+		NInputNumber
 	},
 	setup() {
 		const teamManagementStore = useTeamManagementStore()
 		const masterDataStore = useMasterDataStore()
 		const incidentManagementStore = useIncidentManagementStore()
 		const router = useRouter()
+		const dialog = useDialog()
 		const showModalRef = ref(false)
 		const checkedRowKeysRef = ref<DataTableRowKey[]>([])
 		const formRef = ref<FormInst | null>(null)
@@ -840,6 +1075,12 @@ export default defineComponent({
 			brands.value.map((brand: any) => ({
 				label: brand.name,
 				value: brand.id
+			}))
+		)
+		const topicsOption = computed(() =>
+			masterDataStore.topics.map((topic: any) => ({
+				label: topic.topic_name,
+				value: topic.topic_name
 			}))
 		)
 		const teamAndBa = reactive({
@@ -855,7 +1096,7 @@ export default defineComponent({
 					]
 				}
 			],
-			team_options: []
+			team_options: [] as TeamOption[]
 		})
 		const randomBaOptions = ref<any>([])
 		const socialOptions = ref<any>([])
@@ -875,7 +1116,7 @@ export default defineComponent({
 		const teamOptions = ref<any>([])
 		const defaultValue = {
 			id: 0,
-			topic: "",
+			topic: null,
 			sentiment_type: "Post",
 			brand_id: 0,
 			formula_id: "",
@@ -890,8 +1131,9 @@ export default defineComponent({
 			type_incident_after: 2,
 			description_before: "",
 			description_after: "",
+			date_post: null,
 			team: { team: { name: "" } },
-			formulas: [{ brand: "", formula: "", description: "" }],
+			formulas: { brand: { name: "" }, name: "", description: "" },
 			incidentBrandAdvocacys: [
 				{ brandAdvocacy: { candidate: { firstname: "", lastname: "" } } },
 				{ team_id: null, team: { name: "" }, point: "0" },
@@ -902,20 +1144,38 @@ export default defineComponent({
 				{
 					team_id: 0,
 					team_name: "",
+					is_active: 1,
+					is_delete: 0,
+					no: 0,
+					checkBox: false,
+					users: [],
+					usersSelected: [
+						{
+							user_id: 0,
+							is_active: 1,
+							is_delete: 0
+						}
+					],
+					teamAndUserOptions: [],
 					ba: [
 						{
 							name: "",
 							point_case: "",
 							brand_advocacy_id: 0,
 							is_active: 1,
-							is_delete: 0
+							is_delete: 0,
+							topic: []
 						}
 					]
 				}
 			],
 			amount: 1,
 			team_name: "",
-			all_ba: []
+			all_ba: [],
+			incidentTeams: [],
+			like_amount: 0,
+			share_amount: 0,
+			view_amount: 0
 		}
 		const incidentForm = reactive({ ...defaultValue })
 		const isModalManagement = reactive({
@@ -932,18 +1192,19 @@ export default defineComponent({
 				case MODAL_TYPE.EDIT:
 					return "Edit Incident"
 				case MODAL_TYPE.RANDOM:
-					return "Random BA"
+					return "Select BA"
 				default:
 					return ""
 			}
 		})
+		const oldIncidentFormCandidate = ref()
 		function createColumns(): DataTableColumns<RowData> {
 			return [
 				{
 					title: "No.",
 					key: "no",
 					width: "50px",
-					className: "!text-center max-w-[50px]",
+					className: "!text-center max-w-[50px] whitespace-nowrap",
 					render(row, index) {
 						return h("div", pagination.limit * (pagination.page - 1) + index + 1)
 					}
@@ -952,9 +1213,9 @@ export default defineComponent({
 					title: "Feedback Title",
 					key: "feedback",
 					width: "200px",
-					className: "max-w-[200px] whitespace-nowrap truncate",
+					className: "",
 					render(row) {
-						return h("div", row.topic)
+						return h("div", { className: "max-w-[200px] whitespace-nowrap truncate" }, row.topic)
 					}
 				},
 				{
@@ -989,11 +1250,11 @@ export default defineComponent({
 					title: "Team",
 					key: "team",
 					width: "200px",
-					className: "!text-center max-w-[200px] ",
+					align: "center",
 					render(row) {
 						const teamNames = Array.from(
 							new Set(
-								row.incidentBrandAdvocacys
+								row.incidentTeams
 									.map((team: { team: { name: string } }) => team?.team?.name)
 									.filter(name => name !== undefined)
 							)
@@ -1025,12 +1286,12 @@ export default defineComponent({
 					}
 				},
 				{
-					title: "Owner BA ",
-					key: "owner_link",
+					title: "Create Date",
+					key: "created_at",
 					width: "250px",
-					className: "max-w-[200px] !text-center",
+					className: "max-w-[200px] !text-center whitespace-nowrap",
 					render(row) {
-						return h("div", { class: "space-y-2" }, row.owner_link)
+						return h("div", { class: "space-y-2" }, moment(row.created_at).format("DD/MM/YYYY HH:mm"))
 					}
 				},
 				{
@@ -1040,44 +1301,30 @@ export default defineComponent({
 					width: "100px",
 					render(row) {
 						return h("div", { class: "flex gap-x-6 justify-center items-center" }, [
-							h(Icon, {
-								icon: "mdi:eye-outline",
-								class: "w-6 h-6 cursor-pointer",
-								onClick: async (e: MouseEvent) => {
-									e.preventDefault()
-									await incidentManagementStore.getIncidentById(row.id)
+							checkPermission(["im-manage-all", "im-case-view"]) &&
+								h(Icon, {
+									icon: "mdi:eye-outline",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: async (e: MouseEvent) => {
+										e.preventDefault()
+										await incidentManagementStore.getIncidentById(row.id)
 
-									const teamNames = Array.from(
-										new Set(
-											incidentManagementStore.incident.incidentBrandAdvocacys
-												.map((team: { team: { name: string } }) => team?.team?.name)
-												.filter(name => name !== undefined)
-										)
-									).join(" ")
-									const formula = Array.from(
-										new Set(
-											toRaw(incidentManagementStore.incident.incidentBrandAdvocacys || [])
-												.flatMap(
-													(brand: any) =>
-														brand.brandAdvocacy?.candidate?.candidateFormulas || []
-												)
-												.map((formula: any) =>
-													JSON.stringify({
-														formula: formula.formula.name,
-														brand: formula.formula.brand.name,
-														description: formula.formula.description
-													})
-												)
-										)
-									).map((str: string) => JSON.parse(str))
-									Object.assign(incidentForm, incidentManagementStore.incident, {
-										team_name: teamNames,
-										formulas: formula
-									})
-									isModalManagement.value = true
-									isModalManagement.event = MODAL_TYPE.VIEW
-								}
-							}),
+										const teamNames = Array.from(
+											new Set(
+												row.incidentTeams
+													.map((team: { team: { name: string } }) => team?.team?.name)
+													.filter(name => name !== undefined)
+											)
+										).join(", ")
+										const formula = incidentManagementStore.incident.formula
+										Object.assign(incidentForm, incidentManagementStore.incident, {
+											team_name: teamNames,
+											formulas: formula
+										})
+										isModalManagement.value = true
+										isModalManagement.event = MODAL_TYPE.VIEW
+									}
+								}),
 							h(Icon, {
 								icon: "icon-park-outline:view-grid-detail",
 								class: "w-6 h-6 cursor-pointer",
@@ -1085,57 +1332,163 @@ export default defineComponent({
 									router.push("/incident-management/payment-detail")
 								}
 							}),
-							h(Icon, {
-								icon: "flowbite:edit-outline",
-								class: "w-6 h-6 cursor-pointer",
-								onClick: async () => {
-									await incidentManagementStore.getIncidentById(row.id)
-									const candidate = incidentManagementStore.incident.incidentBrandAdvocacys.reduce(
-										(acc: any, brand: any) => {
-											const teamIndex = acc.findIndex(
-												(team: any) => team.team_id === brand.team.id
+							checkPermission(["im-manage-all", "im-case-create", "im-case-review"]) &&
+								h(Icon, {
+									icon: "flowbite:edit-outline",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: async () => {
+										await incidentManagementStore.getIncidentById(row.id)
+										await masterDataStore.getTopic()
+										const candidate =
+											await incidentManagementStore.incident.incidentBrandAdvocacys.reduce(
+												async (accPromise: Promise<any[]>, brand: any) => {
+													const acc = await accPromise
+													const teamIndex = acc.findIndex(
+														(team: any) => team?.team_id === brand?.team?.id
+													)
+													const candidateData = brand?.brandAdvocacy?.candidate || {}
+													const baData = {
+														name: `${candidateData.firstname || ""} ${candidateData.lastname || ""}`,
+														point_case: brand.point,
+														brand_advocacy_id: brand.brand_advocacy_id,
+														is_active: candidateData.is_active,
+														is_delete: candidateData.is_delete,
+														topic: brand?.incidentBrandAdvocacyTopics?.map(
+															(topic: any) => topic.topicMaster?.topic_name
+														)
+													}
+													const incidentTeam =
+														incidentManagementStore.incident.incidentTeams.find(
+															(team: any) => team?.team_id === brand?.team?.id
+														)
+
+													if (teamIndex === -1) {
+														const params = {
+															team_id: incidentTeam.team_id
+														}
+														const res = await incidentManagementStore.getTeamUsers(params)
+														const mappingOption = res?.map((item: any) => ({
+															value: item?.user?.id,
+															label: `${item?.user?.firstname} ${item?.user?.lastname}`
+														}))
+
+														acc.push({
+															team_id: incidentTeam?.team_id,
+															team_name: incidentTeam?.team?.name,
+															is_active: incidentTeam?.is_active,
+															is_delete: incidentTeam?.is_delete,
+															no: incidentTeam ? incidentTeam.no : 0,
+															checkBox: incidentTeam?.incidentTeamUsers?.length > 0,
+															teamAndUserOptions: mappingOption,
+															users: incidentTeam?.incidentTeamUsers?.map(
+																(user: any) => user?.user_id
+															),
+															usersSelected:
+																incidentTeam?.incidentTeamUsers?.map((user: any) => {
+																	return {
+																		user_id: user?.user_id,
+																		is_active: user?.user?.is_active,
+																		is_delete: user?.user?.is_delete
+																	}
+																}) ?? [],
+															ba: [baData]
+														})
+													} else {
+														acc[teamIndex].ba.push(baData)
+													}
+
+													return acc
+												},
+												Promise.resolve([])
 											)
-											const candidateData = brand?.brandAdvocacy?.candidate || {}
-											const baData = {
-												name: `${candidateData.firstname || ""} ${candidateData.lastname || ""}`,
-												point_case: brand.point,
-												brand_advocacy_id: brand.brand_advocacy_id,
-												is_active: candidateData.is_active,
-												is_delete: candidateData.is_delete
-											}
 
-											if (teamIndex === -1) {
-												acc.push({
-													team_id: brand.team.id,
-													team_name: brand.team.name,
-													ba: [baData]
+										for (const team of incidentManagementStore.incident?.incidentTeams ?? []) {
+											const teamExists = candidate.find((t: any) => t.team_id === team.team_id)
+											if (!teamExists) {
+												const params = {
+													team_id: team.team_id
+												}
+												const res = await incidentManagementStore.getTeamUsers(params)
+												const mappingOption = res?.map((item: any) => ({
+													value: item?.user?.id,
+													label: `${item?.user?.firstname} ${item?.user?.lastname}`
+												}))
+
+												candidate.push({
+													team_id: team.team_id,
+													team_name: team.team.name,
+													is_active: team.is_active,
+													is_delete: team.is_delete,
+													no: team.no,
+													users:
+														team?.incidentTeamUsers?.map((user: any) => user?.user_id) ??
+														[],
+													usersSelected:
+														team?.incidentTeamUsers?.map((user: any) => {
+															return {
+																user_id: user?.user_id,
+																is_active: user?.user?.is_active,
+																is_delete: user?.user?.is_delete
+															}
+														}) ?? [],
+													teamAndUserOptions: mappingOption,
+													checkBox: team?.incidentTeamUsers?.length > 0 ? true : false,
+													ba: []
 												})
-											} else {
-												acc[teamIndex].ba.push(baData)
 											}
+										}
 
-											return acc
-										},
-										[]
-									)
-									Object.assign(incidentForm, incidentManagementStore.incident, {
-										formula: toRaw(incidentManagementStore.incident.incidentBrandAdvocacys).flatMap(
-											(brand: any) => brand?.brandAdvocacy?.candidate?.candidateFormulas
-										),
-										team_id: incidentManagementStore.incident.incidentBrandAdvocacys[0].team.id,
-										candidate: candidate,
-										formula_id: `${incidentManagementStore.incident.brand_id}_${incidentManagementStore.incident.formula_id}`
-									})
-									selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
-										return [
-											team.team_id,
-											...team.ba.map((ba: any) => `${team.team_id}_${ba.brand_advocacy_id}`)
-										]
-									})
-									isModalManagement.value = true
-									isModalManagement.event = MODAL_TYPE.EDIT
-								}
-							})
+										Object.assign(incidentForm, incidentManagementStore.incident, {
+											formula: toRaw(
+												incidentManagementStore.incident.incidentBrandAdvocacys
+											).flatMap(
+												(brand: any) => brand?.brandAdvocacy?.candidate?.candidateFormulas
+											),
+											date_post: incidentManagementStore.incident?.date_post
+												? moment(incidentManagementStore.incident?.date_post).valueOf()
+												: null,
+											team_id:
+												incidentManagementStore.incident?.incidentBrandAdvocacys[0]?.team?.id,
+											candidate: candidate,
+											formula_id: `${incidentManagementStore.incident.brand_id}_${incidentManagementStore.incident.formula_id}`
+										})
+										selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
+											return [team.team_id]
+										})
+										selectedBa.value.ba = incidentForm.candidate.flatMap((team: any) => {
+											return team.ba
+										})
+										oldIncidentFormCandidate.value = _.cloneDeep(incidentForm.candidate)
+										isModalManagement.value = true
+										isModalManagement.event = MODAL_TYPE.EDIT
+									}
+								}),
+
+							checkPermission(["im-manage-all", "im-case-create", "im-case-review"]) &&
+								h(Icon, {
+									icon: "tabler:trash",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: () => {
+										dialog.error({
+											title: "ยืนยันการลบข้อมูล",
+											content: `ข้อมูลที่ลบจะไม่สามารถกู้คืนได้
+											 คุณแน่ใจที่จะลบข้อมูล Topic : ${row.topic} หรือไม่ ?`,
+											positiveText: "แน่ใจ",
+											negativeText: "ยกเลิก",
+											onPositiveClick: async () => {
+												pagination.page = 1
+												await incidentManagementStore.deleteIncident(row.id)
+												await incidentManagementStore.getIncidents({
+													...pagination,
+													...filterApi
+												})
+											},
+											onNegativeClick: () => {
+												// message.error("Not Sure")
+											}
+										})
+									}
+								})
 						])
 					}
 				}
@@ -1149,7 +1502,8 @@ export default defineComponent({
 		const filterApi = reactive({
 			filter: "",
 			feedback_type: "",
-			status_case: ""
+			status_case: "",
+			date: null
 		})
 		const paginateCount = computed(() => {
 			const countPage = pagination.limit * pagination.page
@@ -1169,8 +1523,8 @@ export default defineComponent({
 			Object.assign(teamAndBa, {
 				team_options: incidentManagementStore.teamAndBa.map((team: any) => ({
 					label: team.name,
-					key: team.id,
-					children: team?.teamBrandAdvocacy
+					value: team.id,
+					ba: team?.teamBrandAdvocacy
 						?.filter(
 							(ba: any) =>
 								ba.brandAdvocacy?.candidate?.firstname &&
@@ -1181,11 +1535,12 @@ export default defineComponent({
 						)
 						.map((ba: any) => ({
 							label: ba.brandAdvocacy?.candidate?.firstname + " " + ba.brandAdvocacy?.candidate?.lastname,
-							key: team.id + "_" + ba?.brand_advocacy_id,
+							value: ba?.brand_advocacy_id,
 							team_id: team.id,
 							team_name: team.name,
 							is_active: ba.brandAdvocacy?.candidate?.is_active,
-							is_delete: ba.brandAdvocacy?.candidate?.is_delete
+							is_delete: ba.brandAdvocacy?.candidate?.is_delete,
+							topic: ba.brandAdvocacy?.candidate?.topic
 						}))
 				}))
 			})
@@ -1212,8 +1567,10 @@ export default defineComponent({
 
 		function handleCreateIncident(e: MouseEvent) {
 			e.preventDefault()
+			masterDataStore.getTopic()
 			Object.assign(incidentForm, defaultValue)
 			selectedCandidates.value = []
+
 			isModalManagement.value = true
 			isModalManagement.event = MODAL_TYPE.CREATE
 		}
@@ -1244,48 +1601,133 @@ export default defineComponent({
 		const selectedCandidates = ref<(string | number)[]>([])
 		function handleUpdateValue(
 			value: Array<string | number | { id: number; name: string; point_case: number; team_id: number }>,
-			option: TreeSelectOption | null | Array<TreeSelectOption | null>
+			option: any | null | Array<any | null>
 		): void {
-			if (option) {
-				const mappingData = (option as TreeSelectOption[])
-					.filter((item: any) => item !== null)
-					.reduce((acc: any, item: any) => {
-						if (item.children && Array.isArray(item.children)) {
-							const existingTeamIndex = acc.findIndex(
-								(team: any) => team.team_id === item.key && team.team_name === item.label
-							)
-							if (existingTeamIndex === -1) {
-								acc.push({
-									team_id: item.key,
-									team_name: item.label,
-									ba: []
-								})
-							}
-						} else {
-							const teamIndex = acc.findIndex((team: any) => team.team_id === item.team_id)
-							const baData = {
-								brand_advocacy_id: item.key,
-								name: item.label,
-								point_case: 0,
-								is_active: item.is_active,
-								is_delete: item.is_delete
-							}
-							if (teamIndex !== -1) {
-								if (acc[teamIndex].ba !== undefined) {
-									acc[teamIndex].ba.push(baData)
-								} else {
-									acc[teamIndex].ba = [baData]
-								}
-							} else {
-								acc.push({
-									team_id: item.team_id,
-									team_name: item.team_name,
-									ba: [baData]
-								})
-							}
+			if (isModalManagement.event !== MODAL_TYPE.EDIT && isModalManagement.event !== MODAL_TYPE.RANDOM) {
+				Object.assign(incidentForm, {
+					candidate: option?.map((item: any) => ({
+						team_id: item.value,
+						team_name: item.label,
+						user: [],
+						userSelected: [],
+						ba: []
+					}))
+				})
+			} else {
+				const existingCandidates = oldIncidentFormCandidate.value.map((team: any) => {
+					if (option.some((item: any) => item.value === team.team_id)) {
+						return {
+							...team,
+							user: [],
+							userSelected: [],
+							is_active: 1,
+							is_delete: 0,
+							ba: team.ba.map((ba: any) => ({
+								...ba,
+								is_active: 1,
+								is_delete: 0
+							}))
 						}
-						return acc
-					}, [])
+					} else {
+						return {
+							...team,
+							is_active: 0,
+							is_delete: 1,
+							user: [],
+							userSelected: [],
+							ba: team.ba.map((ba: any) => ({
+								...ba,
+								is_active: 0,
+								is_delete: 1
+							}))
+						}
+					}
+				})
+				option.forEach((item: any) => {
+					const existingTeam = existingCandidates.find((team: any) => team.team_id === item.value)
+					if (!existingTeam) {
+						existingCandidates.push({
+							team_id: item.value,
+							team_name: item.label,
+							is_active: 1,
+							is_delete: 0,
+							user: [],
+							userSelected: [],
+							ba: []
+						})
+					}
+				})
+
+				Object.assign(incidentForm, {
+					candidate: existingCandidates
+				})
+				oldIncidentFormCandidate.value = existingCandidates
+			}
+		}
+
+		const selectedBa = ref<{
+			team_id: number
+			teamIndex: number
+			key?: any[]
+			ba: Ba[]
+			candidateBa: any[]
+			no: number | null
+		}>({
+			team_id: 0,
+			teamIndex: 0,
+			key: [],
+			ba: [],
+			candidateBa: [],
+			no: 0
+		})
+		function handleUpdateValueBa(value: any, option: any) {
+			if (isModalManagement.event !== MODAL_TYPE.EDIT && isModalManagement.event !== MODAL_TYPE.RANDOM) {
+				selectedBa.value.ba = option.map((item: any) => ({
+					name: item.label,
+					point_case: "0",
+					brand_advocacy_id: item.value,
+					is_active: item.is_active,
+					is_delete: item.is_delete,
+					topic: item.topic
+				}))
+				incidentForm.candidate[selectedBa.value.teamIndex].ba = selectedBa.value.ba
+			} else {
+				const mappingData = oldIncidentFormCandidate.value.map((team: any) => {
+					if (team.team_id === selectedBa.value.team_id) {
+						const updatedBa = option.map((item: any) => {
+							const existingBa = incidentForm.candidate[selectedBa.value.teamIndex].ba.find(
+								(ba: any) => ba.brand_advocacy_id === item.value
+							)
+							return {
+								name: item.label,
+								point_case: "0",
+								brand_advocacy_id: item.value,
+								is_active: 1,
+								is_delete: 0,
+								topic: existingBa ? existingBa.topic : []
+							}
+						})
+
+						team.ba.forEach((oldBa: any) => {
+							const baExists = updatedBa.some(
+								(newBa: any) => newBa.brand_advocacy_id === oldBa.brand_advocacy_id
+							)
+							if (!baExists) {
+								updatedBa.push({
+									name: oldBa.name,
+									point_case: oldBa.point_case,
+									brand_advocacy_id: oldBa.brand_advocacy_id,
+									is_active: 0,
+									is_delete: 1,
+									topic: oldBa.topic
+								})
+							}
+						})
+
+						team.ba = updatedBa
+					}
+					return team
+				})
 				Object.assign(incidentForm, {
 					candidate: mappingData
 				})
@@ -1324,13 +1766,30 @@ export default defineComponent({
 				type_incident_after: incidentForm.type_incident_after,
 				description_before: incidentForm.description_before,
 				description_after: incidentForm.description_after,
+				like_amount: incidentForm.like_amount,
+				share_amount: incidentForm.share_amount,
+				view_amount: incidentForm.view_amount,
+				date_post: incidentForm.date_post ? moment(incidentForm.date_post).format("YYYY-MM-DD HH:mm:ss") : null,
+				teams: incidentForm.candidate.map((team: any) => {
+					return {
+						team_id: team.team_id,
+						users: team?.users?.map((user: any) => {
+							return {
+								user_id: user,
+								is_active: 1,
+								is_delete: 0
+							}
+						}),
+						no: team.no ? team.no : 0
+					}
+				}),
 				ba: incidentForm.candidate.flatMap((team: any) =>
 					team.ba.map((ba: any) => {
-						const brandAdvocacyId = ba.brand_advocacy_id.toString().split("_")
 						return {
 							team_id: team.team_id,
 							// eslint-disable-next-line no-constant-condition
-							brand_advocacy_id: typeof Array ? Number(brandAdvocacyId[1]) : ba.brand_advocacy_id
+							brand_advocacy_id: ba.brand_advocacy_id,
+							topic: ba.topic
 						}
 					})
 				)
@@ -1339,43 +1798,16 @@ export default defineComponent({
 			await incidentManagementStore.getIncidents({ ...pagination, ...filterApi })
 			isModalManagement.value = false
 		}
-		async function handleRandomBa() {
-			const params = {
-				team_id: incidentForm.team_id,
-				amount: incidentForm.amount
+		function handleCloseSelectedBa() {
+			selectedBa.value = {
+				team_id: 0,
+				teamIndex: 0,
+				key: [],
+				ba: [],
+				candidateBa: [],
+				no: selectedBa.value.no
 			}
-
-			await incidentManagementStore.getRandomBa(params)
-			const candidate = incidentManagementStore.ba.reduce(
-				(acc: any, ba: any) => {
-					const index = acc.findIndex((ac: any) => ac.team_id === incidentForm.team_id)
-					const baData = {
-						name: ba.firstname + " " + ba.lastname,
-						totalJob: ba.totalJob,
-						point_case: 0,
-						brand_advocacy_id: ba.brand_advocacy_id
-					}
-					Object.assign(incidentForm, {
-						candidate: incidentForm.candidate.map(
-							(ba: any) => acc[index].team_id === ba.team_id && (ba.ba = [])
-						)
-					})
-
-					acc.map((ac: any) => ac.team_id === incidentForm.team_id && ac.ba.push(baData))
-					return acc
-				},
-				[...incidentForm.candidate]
-			)
-			Object.assign(incidentForm, {
-				all_ba: incidentManagementStore.ba.map((ba: any) => ba.brand_advocacy_id),
-				candidate: candidate,
-				amount: 1
-			})
-			randomBaOptions.value = incidentManagementStore.ba.map((ba: any) => ({
-				label: ba.firstname + " " + ba.lastname,
-				value: ba.brand_advocacy_id,
-				totalJob: ba.totalJob
-			}))
+			isModalManagement.randomModal = false
 		}
 		async function updateIncident() {
 			const splitFormula = incidentForm.formula_id.toString().split("_")
@@ -1395,70 +1827,135 @@ export default defineComponent({
 				type_incident_after: incidentForm.type_incident_after,
 				description_before: incidentForm.description_before,
 				description_after: incidentForm.description_after,
+				like_amount: incidentForm.like_amount,
+				share_amount: incidentForm.share_amount,
+				view_amount: incidentForm.view_amount,
+				date_post: incidentForm.date_post ? moment(incidentForm.date_post).format("YYYY-MM-DD HH:mm:ss") : null,
+				teams: incidentForm.candidate.map((team: any) => {
+					return {
+						team_id: team.team_id,
+						users: team.usersSelected,
+						no: team.no ? team.no : 0,
+						is_active: team.is_active,
+						is_delete: team.is_delete
+					}
+				}),
 				ba: incidentForm.candidate.flatMap((team: any) =>
 					team.ba
 						.filter((ba: any) => ba.brand_advocacy_id)
 						.map((ba: any) => {
-							const brandAdvocacyId = ba.brand_advocacy_id.toString().split("_")
 							return {
 								team_id: team.team_id,
-								brand_advocacy_id:
-									brandAdvocacyId.length > 1 ? Number(brandAdvocacyId[1]) : ba.brand_advocacy_id,
+								brand_advocacy_id: ba.brand_advocacy_id,
 								is_active: ba.is_active,
 								is_delete: ba.is_delete,
-								point: Number(ba.point_case)
+								point: Number(ba.point_case),
+								topic: ba.topic
 							}
 						})
 				)
 			}
-			await incidentManagementStore.updateIncident(body)
-			await incidentManagementStore.getIncidents({ ...pagination, ...filterApi })
-			isModalManagement.value = false
+
+			if (incidentForm.status_incident === 1 || incidentForm.status_incident === 2) {
+				await incidentManagementStore.updateIncident(body)
+				await incidentManagementStore.getIncidents({ ...pagination, ...filterApi })
+				isModalManagement.value = false
+			} else {
+				dialog.warning({
+					title: "ยืนยันการแก้ไขข้อมูล",
+					content: `ข้อมูลที่แก้ไขเมื่อ จ่าย Point แล้วจะอัพเดททุกๆ 02.30 น.(ตีสองครึ่ง) ของทุกวัน ยืนยันการแก้ไขข้อมูลของ Incident Case ${incidentForm.topic}  หรือไม่ ?`,
+					positiveText: "ยืนยัน",
+					negativeText: "ยกเลิก",
+					onPositiveClick: async () => {
+						await incidentManagementStore.updateIncident(body)
+						await incidentManagementStore.getIncidents({ ...pagination, ...filterApi })
+						isModalManagement.value = false
+					},
+					onNegativeClick: () => {
+						isModalManagement.value = false
+					}
+				})
+			}
 		}
 		function handleCancel() {
 			Object.assign(incidentForm, defaultValue)
+			selectedBa.value = {
+				team_id: 0,
+				teamIndex: 0,
+				key: [],
+				ba: [],
+				candidateBa: [],
+				no: 0
+			}
 			isModalManagement.value = false
 		}
-		function handleOpenModalRandom(teamId: number) {
-			Object.assign(incidentForm, {
+		const teamIndexOpenRandom = ref(0)
+		function handleOpenModalRandom(teamId: number, teamIndex: number) {
+			teamIndexOpenRandom.value = teamIndex
+
+			selectedBa.value.no = incidentForm.candidate[teamIndex].no
+
+			selectedBa.value = {
+				...selectedBa.value,
 				team_id: teamId,
-				all_ba: []
-			})
+				teamIndex: teamIndex,
+				ba: incidentForm.candidate.flatMap((team: any) =>
+					team.ba.map((ba: any) => ({
+						team_id: team.team_id,
+						brand_advocacy_id: ba.brand_advocacy_id,
+						is_active: ba.is_active,
+						is_delete: ba.is_delete,
+						topic: ba.topic
+					}))
+				)
+			}
+
+			selectedBa.value.key = selectedBa.value.ba
+				.filter((ba: any) => ba.team_id === teamId && ba.is_delete !== 1)
+				.map((ba: any) => ba.brand_advocacy_id)
 			isModalManagement.randomModal = true
+		}
+		function handleUpdateValueBaNo(value: number) {
+			incidentForm.candidate[teamIndexOpenRandom.value].no = value
 		}
 		function deleteBaWithIndex(teamIndex: number, baIndex: number, checkActive: boolean) {
 			if (checkActive) {
 				incidentForm.candidate[teamIndex].ba[baIndex].is_active = 0
 				incidentForm.candidate[teamIndex].ba[baIndex].is_delete = 1
+				incidentForm.candidate[teamIndex].ba[baIndex].topic = []
 				selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
-					return [team.team_id, ...team.ba.map((ba: any) => `${ba.brand_advocacy_id}`)]
+					return [team.team_id]
 				})
 			} else if (incidentForm.candidate[teamIndex] && incidentForm.candidate[teamIndex].ba) {
 				incidentForm.candidate[teamIndex].ba.splice(baIndex, 1)
-
 				selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
-					return [team.team_id, ...team.ba.map((ba: any) => `${ba.brand_advocacy_id}`)]
+					return [team.team_id]
 				})
 			} else {
 				console.error("Invalid teamIndex or baIndex")
 			}
 		}
-		function deleteTeamWithIndex(teamIndex: number, checkActive: boolean) {
+		function deleteTeamWithIndex(teamId: number, teamIndex: number, checkActive: boolean) {
 			if (checkActive) {
-				incidentForm.candidate[teamIndex].ba.map((ba: any) => {
-					(ba.is_active = 0), (ba.is_delete = 1)
+				incidentForm.candidate[teamIndex].ba.forEach((ba: any) => {
+					ba.is_active = 0
+					ba.is_delete = 1
+					ba.topic = []
 				})
-				selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
-					return [team.team_id, ...team.ba.map((ba: any) => `${ba.brand_advocacy_id}`)]
+				incidentForm.candidate[teamIndex].usersSelected.forEach((user: any) => {
+					user.is_active = 0
+					user.is_delete = 1
 				})
+				incidentForm.candidate[teamIndex].is_active = 0
+				incidentForm.candidate[teamIndex].is_delete = 1
 			} else if (incidentForm.candidate[teamIndex]) {
 				incidentForm.candidate.splice(teamIndex, 1)
-				selectedCandidates.value = incidentForm.candidate.flatMap((team: any) => {
-					return [team.team_id, ...team.ba.map((ba: any) => `${team.team_id}_${ba.brand_advocacy_id}`)]
-				})
 			} else {
 				console.error("Invalid teamIndex")
+				return
 			}
+
+			selectedCandidates.value = selectedCandidates.value.filter((id: any) => id !== teamId)
 		}
 
 		const handleSearch = _.debounce((value: string, type: string) => {
@@ -1470,11 +1967,118 @@ export default defineComponent({
 				filterApi.status_case = value
 			}
 		}, 500)
+
+		function createRequestBody() {
+			const body: any = {
+				...pagination,
+				filter: filterApi.filter,
+				feedback_type: filterApi.feedback_type,
+				status_case: filterApi.status_case
+			}
+
+			if (filterApi.date !== null) {
+				body.startdate = moment(filterApi.date[0]).format("YYYY-MM-DD HH:mm:ss")
+				body.enddate = moment(filterApi.date[1]).format("YYYY-MM-DD HH:mm:ss")
+			}
+
+			return body
+		}
+
+		async function fetchIncidents() {
+			const body = createRequestBody()
+			await incidentManagementStore.getIncidents(body)
+		}
+
 		watch(filterApi, async value => {
 			pagination.page = 1
-			/// Call API
-			await incidentManagementStore.getIncidents({ ...pagination, ...value })
+			await fetchIncidents()
 		})
+		watch(pagination, fetchIncidents)
+
+		async function handleExportIncident() {
+			if (filterApi.date !== null) {
+				const params = {
+					startdate: moment(filterApi.date[0]).format("YYYY-MM-DD HH:mm:ss"),
+					enddate: moment(filterApi.date[1]).format("YYYY-MM-DD HH:mm:ss")
+				}
+				window.open(
+					`${import.meta.env.VITE_API_URL_BA_APP}api/v1/incident-management/export/?startdate=${params.startdate}&enddate=${params.enddate}`
+				)
+			} else {
+				window.open(`${import.meta.env.VITE_API_URL_BA_APP}api/v1/incident-management/export/`)
+			}
+		}
+		const numberOfBaOptions = Array.from({ length: 51 }, (_, i) => ({
+			label: `${i} BA`,
+			value: i
+		}))
+
+		async function handleCheckboxChange(value: boolean, teamId: number) {
+			const team = incidentForm.candidate.find((team: any) => team.team_id === teamId)
+			if (!team) {
+				console.error("Invalid teamId")
+				return
+			}
+
+			team.checkBox = value
+			const params = {
+				team_id: teamId
+			}
+
+			if (team.checkBox) {
+				const res = await incidentManagementStore.getTeamUsers(params)
+				const mappingOption = res?.map((item: any) => ({
+					value: item?.user?.id,
+					label: `${item?.user?.firstname} ${item?.user?.lastname}`
+				}))
+
+				team.teamAndUserOptions = mappingOption
+			} else {
+				if (isModalManagement.event === MODAL_TYPE.EDIT) {
+					team.usersSelected = team.usersSelected.map((user: any) => {
+						return {
+							user_id: user.user_id,
+							is_active: 0,
+							is_delete: 1
+						}
+					})
+				} else {
+					console.error("Invalid event")
+					team.usersSelected = []
+					team.teamAndUserOptions = []
+					team.users = []
+				}
+			}
+		}
+		function handleAssignUsers(value: any, teamIndex: number) {
+			const item = incidentForm.candidate[teamIndex]
+
+			// Ensure usersSelected is defined
+			if (!item.usersSelected) {
+				item.usersSelected = []
+			}
+
+			const selectedUsers = value.map((userId: number) => {
+				return {
+					user_id: userId,
+					is_active: 1,
+					is_delete: 0
+				}
+			})
+
+			const unselectedUsers = item.usersSelected
+				.filter((user: any) => !value.includes(user.user_id))
+				.map((user: any) => {
+					return {
+						user_id: user.user_id,
+						is_active: 0,
+						is_delete: 1
+					}
+				})
+
+			// Update usersSelected
+			incidentForm.candidate[teamIndex].usersSelected = [...selectedUsers, ...unselectedUsers]
+		}
 		return {
 			showModalRef,
 			checkedRowKeysRef,
@@ -1512,7 +2116,6 @@ export default defineComponent({
 			selectedCandidates,
 			renderMultipleSelectTagPoint,
 			handleOpenModalRandom,
-			handleRandomBa,
 			randomBaOptions,
 			handleCancel,
 			updateFormula,
@@ -1523,7 +2126,18 @@ export default defineComponent({
 			updateIncident,
 			deleteBaWithIndex,
 			deleteTeamWithIndex,
-			handleSearch
+			handleSearch,
+			checkPermission,
+			handleUpdateValueBa,
+			selectedBa,
+			handleCloseSelectedBa,
+			filterApi,
+			handleExportIncident,
+			numberOfBaOptions,
+			handleUpdateValueBaNo,
+			topicsOption,
+			handleCheckboxChange,
+			handleAssignUsers
 		}
 	}
 })

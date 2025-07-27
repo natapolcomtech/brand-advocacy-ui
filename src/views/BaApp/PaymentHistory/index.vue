@@ -8,36 +8,13 @@
 				</template>
 			</n-input>
 		</n-space>
-		<div class="rounded-t-xl bg-[#EAF4FF] w-full py-4 pl-12 pr-6 md:flex justify-between">
-			<span class="flex items-center font-semibold truncate">
-				<p class="text-[#2B405B]">รายการ BA ที่เลือก</p>
-				<p class="text-[#4285F4] ml-2">{{ checkedRowKeysRef.length }} รายการ</p>
-			</span>
-			<span v-if="hasReviewing" class="flex items-center gap-2 font-semibold truncate">
-				<p class="text-red-500 flex items-center font-semibold truncate">มี BA จำนวน</p>
-				<p class="text-red-500 flex items-center font-semibold truncate">{{ reviewCount }}</p>
-				<p class="text-red-500 flex items-center font-semibold truncate">ที่มีสถานะ Reviewing</p>
-			</span>
-
-			<n-space class="flex mt-2 md:mt-0 !justify-end md:block">
-				<n-button
-					@click="initialReview"
-					:type="checkedRowKeysRef.length > 0 ? 'primary' : 'tertiary'"
-					strong
-					:secondary="checkedRowKeysRef.length > 0 ? false : true"
-					:disabled="checkedRowKeysRef.length === 0 || hasReviewing"
-					class="!px-8"
-				>
-					Initial Review
-				</n-button>
-			</n-space>
-		</div>
 		<n-data-table
 			:row-key="rowKey"
 			@update:checked-row-keys="handleCheck"
 			:columns="columns"
 			:data="candidateBAStore.candidates.data"
 			:checked-row-keys="checkedRowKeysRef"
+			scroll-x-auto
 		/>
 		<n-pagination
 			:item-count="itemCount"

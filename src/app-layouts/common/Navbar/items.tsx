@@ -7,6 +7,7 @@ import CategoryIcon from "@/assets/jsx-icon/CategoryIcon.vue"
 import MessageIcon from "@/assets/jsx-icon/MessageIcon.vue"
 import UserIcon from "@/assets/jsx-icon/UserIcon.vue"
 import EditIcon from "@/assets/jsx-icon/EditIcon.vue"
+import { checkPermission } from "@/utils/auth"
 
 const BlankIcon = "carbon:document-blank"
 
@@ -131,35 +132,69 @@ export default function getItems(mode: "vertical" | "horizontal", collapsed: boo
 						),
 					key: "team",
 				},
+				...(checkPermission(['um-manage-all'])) ? [{
+					label: () =>
+					  h(
+						RouterLink,
+						{
+						  to: {
+							name: "role"
+						  }
+						},
+						{ default: () => "Role" }
+					  ),
+					key: "role"
+					} ] :[]
+			]
+		},
+		// ...(checkPermission(['um-manage-all'])) ? [{
+		// 	label: () =>
+		// 		h(
+		// 			RouterLink,
+		// 			{
+		// 				to: {
+		// 					name: "system-master-data"
+		// 				}
+		// 			},
+		// 			{ default: () => "System Master Data" }
+		// 		),
+		// 	key: "system-master-data",
+		// 	icon: renderIcon(EditIcon)
+		// }] :[],
+		...(checkPermission(['um-manage-all'])) ? [{
+			label: 'System Master Data',
+			key: 'system-master-data',
+			icon: renderIcon(EditIcon),
+			children: [
 				{
 					label: () =>
 						h(
 							RouterLink,
 							{
 								to: {
-									name: "role"
+									name: "general-data"
 								}
 							},
-							{ default: () => "Role" }
+							{ default: () => "General Data" }
 						),
-					key: "role",
+					key: "general-data",
 				},
+				{
+					label: () =>
+						h(
+							RouterLink,
+							{
+								to: {
+									name: "topic-data"
+								}
+							},
+							{ default: () => "Topic Data" }
+						),
+					key: "topic-data",
+				},
+				
 			]
-		},
-		{
-			label: () =>
-				h(
-					RouterLink,
-					{
-						to: {
-							name: "system-master-data"
-						}
-					},
-					{ default: () => "System Master Data" }
-				),
-			key: "system-master-data",
-			icon: renderIcon(EditIcon)
-		},
+		}] : [],
 		
 	]
 }

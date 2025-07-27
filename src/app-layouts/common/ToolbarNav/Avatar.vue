@@ -1,6 +1,8 @@
 <template>
 	<n-dropdown :options="options" placement="bottom-end" @select="handleSelect">
-		<n-avatar round :size="32" src="/images/avatar.jpg" />
+		<n-avatar round :size="32">
+			{{ nameAvatar }}
+		</n-avatar>
 	</n-dropdown>
 </template>
 
@@ -19,6 +21,13 @@ defineOptions({
 
 const router = useRouter()
 
+const nameAvatar = ref("")
+const user = JSON.parse(localStorage.getItem("user") || "{}")
+	const getFirstName = user?.firstname || ""
+	const getLastName = user?.lastname || ""
+	const firstWorldFirstName = getFirstName.charAt(0).toUpperCase()
+	const firstWorldLastName = getLastName.charAt(0).toUpperCase()
+	nameAvatar.value = `${firstWorldFirstName}${firstWorldLastName}`
 const options = ref([
 	{
 		label: "Profile",

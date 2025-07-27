@@ -1,20 +1,16 @@
 <template>
 	<div class="page">
 		<n-card class="header flex flex-col" content-style="padding:0">
+		
 			<div class="user-info flex flex-wrap">
 				<div class="propic">
-					<n-avatar :size="100" :src="propic" round />
-					<ImageCropper
-						v-slot="{ openCropper }"
-						@crop="setCroppedImage"
-						:placeholder="'Select your profile picture'"
-					>
-						<Icon :name="EditIcon" :size="16" class="edit" @click="openCropper()"></Icon>
-					</ImageCropper>
+					<n-avatar :size="100" round class="!bg-yellow-300 !text-3xl">
+						{{ profileUser.firstname[0].toUpperCase() }}
+					</n-avatar>
 				</div>
 				<div class="info grow flex flex-col justify-center">
 					<div class="name">
-						<h1>Ruttanachot Kaeyai</h1>
+						<h1>{{ profileUser.firstname }} {{ profileUser.lastname }}</h1>
 					</div>
 					<div class="details flex flex-wrap">
 						<div class="item">
@@ -22,19 +18,19 @@
 								<template #trigger>
 									<div class="tooltip-wrap">
 										<Icon :name="RoleIcon"></Icon>
-										<span>Software Engineer</span>
+										<span>{{ profileRole.role_name }}</span>
 									</div>
 								</template>
 								<span>Role</span>
 							</n-tooltip>
 						</div>
-						
+
 						<div class="item">
 							<n-tooltip placement="top">
 								<template #trigger>
 									<div class="tooltip-wrap">
 										<Icon :name="MailIcon"></Icon>
-										<span>ruttanachot.kaeyai@comtech.dev</span>
+										<span>{{ profileUser.email }}</span>
 									</div>
 								</template>
 								<span>Contacts</span>
@@ -42,15 +38,9 @@
 						</div>
 					</div>
 				</div>
-				<div class="actions">
-					<ImageCropper
-						v-slot="{ openCropper }"
-						@crop="setCroppedImage"
-						:placeholder="'Select your profile picture'"
-					>
-						<n-button size="large" type="primary" @click="openCropper()">Edit profile image</n-button>
-					</ImageCropper>
-				</div>
+				<!-- <div class="  flex flex-col justify-center">
+					<n-button size="large" type="info" round >Point 10</n-button>
+				</div> -->
 			</div>
 		</n-card>
 	</div>
@@ -67,7 +57,8 @@ const EditIcon = "uil:image-edit"
 const MailIcon = "tabler:mail"
 
 const propic = ref("/images/avatar.jpg")
-
+const profileUser = ref(JSON.parse(localStorage.getItem("user") || "{}"))
+const profileRole = ref(JSON.parse(localStorage.getItem("role") || "{}"))
 function setCroppedImage(result: ImageCropperResult) {
 	const canvas = result.canvas as HTMLCanvasElement
 	propic.value = canvas.toDataURL()

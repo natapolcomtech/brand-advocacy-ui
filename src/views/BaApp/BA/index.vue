@@ -2,7 +2,7 @@
 	<div>
 		<h1>BA List</h1>
 		<n-space class="mb-6 mt-4">
-			<n-input type="text" placeholder="Search" size="large" :on-update:value="handleSearch">
+			<n-input type="text" placeholder="Search Name , Telephone" size="large" :on-update:value="handleSearch">
 				<template #suffix>
 					<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
 				</template>
@@ -13,6 +13,7 @@
 			:columns="column"
 			:data="candidateBAStore.candidates.data"
 			@update:checked-row-keys="handleCheck"
+			scroll-x-auto
 		/>
 		<n-pagination
 			:item-count="itemCount"
@@ -35,7 +36,7 @@
 			preset="card"
 			size="huge"
 			:style="{
-				width: '800px'
+				width: '1000px'
 			}"
 			:title="titleModal"
 		>
@@ -50,11 +51,11 @@
 						<p class="text-3xl">{{ candidateDetail.firstname[0].toUpperCase() }}</p>
 					</n-avatar>
 				</div>
+
 				<div>
 					<h2 class="mb-4 text-2xl font-semibold text-[#2E3C52]">
 						{{ candidateDetail.firstname }} {{ candidateDetail.lastname }}
 					</h2>
-					<!-- TODO: รอ api -->
 					<div class="flex flex-col gap-1">
 						<span class="md:flex">
 							<p class="md:w-40 font-bold">Facebook</p>
@@ -73,7 +74,7 @@
 							<p class="truncate">: {{ candidateDetail.telephone }}</p>
 						</span>
 					</div>
-					<n-space class="mt-4">
+					<n-space class="mt-4 overflow-x-auto">
 						<n-button
 							:type="
 								candidateDetail.is_contactable_telephone !== 0 &&
@@ -101,6 +102,19 @@
 						</n-button>
 					</n-space>
 				</div>
+				<div class="mt-4 flex justify-end w-full lg:-ml-20">
+					<n-button
+						@click="navigateToManagePoint(candidateDetail.brandAdvocacys[0]?.id)"
+						size="small"
+						type="info"
+						round
+						class="!flex !items-center !justify-center !text-center"
+					>
+						<p class="text-white mr-1">Point</p>
+						{{ candidateDetail.brandAdvocacys[0]?.point }}
+						<Icon icon="flowbite:edit-outline" width="16" height="16" style="color: #ffff" class="ml-1" />
+					</n-button>
+				</div>
 			</div>
 			<n-card size="medium" class="mt-4 !rounded-xl !border-[#D1D5DB]">
 				<n-space vertical>
@@ -118,6 +132,18 @@
 							<p class="md:w-40 font-bold">อายุ</p>
 							<p>{{ `: ${calculateAge(candidateDetail.birthdate)}` }}</p>
 						</span>
+						<span class="flex">
+							<p class="md:w-40 font-bold">อาชีพ</p>
+							<p>{{ `: ${candidateDetail.occupation}` }}</p>
+						</span>
+						<span class="flex">
+							<p class="md:w-40 font-bold">ที่อยู่</p>
+							<p>{{ `: ${candidateDetail.address ?? "-"}` }}</p>
+						</span>
+						<span class="flex">
+							<p class="md:w-40 font-bold">บุตร</p>
+							<p>{{ `: ${candidateDetail.childrens.length} คน` }}</p>
+						</span>
 					</div>
 				</n-space>
 				<n-space v-show="candidateDetail.childrens.length > 0" vertical class="mt-4">
@@ -130,6 +156,10 @@
 						<span class="flex">
 							<p class="md:w-40 font-bold">ชื่อ</p>
 							<p class="truncate">{{ `: ${child.firstname} ${child.lastname}` }}</p>
+						</span>
+						<span class="flex">
+							<p class="md:w-40 font-bold">ชื่อเล่น</p>
+							<p>{{ `: ${child.nickname}` }}</p>
 						</span>
 						<span class="flex">
 							<p class="md:w-40 font-bold">เพศ</p>
@@ -145,7 +175,7 @@
 					<h4 class="mb-2 font-semibold text-[#2073DE]">ทีม :</h4>
 					<span class="flex">
 						<p class="flex flex-col gap-1 pl-5">
-							{{ candidateDetail.team }}
+							{{ candidateDetail.team ? candidateDetail.team : "-" }}
 						</p>
 					</span>
 				</n-space>
@@ -158,7 +188,7 @@
 								:key="index"
 								class="flex flex-col gap-1 pl-5"
 							>
-								{{ getBrandName(item.formula_id) ?? "-" }}
+								{{ item.formula?.brand?.name ?? "-" }}
 							</p>
 						</span>
 					</div>
@@ -233,10 +263,11 @@
 								v-model:value="dataCandidate.birthdate"
 								type="date"
 								class="w-full"
+								format="dd/MM/yyyy"
 							/>
 						</n-form-item>
 					</n-gi>
-					<n-gi span="2">
+					<n-gi>
 						<n-form-item label="Team" path="team">
 							<n-select
 								size="large"
@@ -245,6 +276,17 @@
 								:render-tag="renderMultipleSelectTag"
 								:options="teamOptions"
 								multiple
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
+						<n-form-item label="Review Status" path="review_status_id">
+							<n-select
+								size="large"
+								v-model:value="dataCandidate.review_status_id"
+								:render-label="renderLabel"
+								:render-tag="renderMultipleSelectTag"
+								:options="REVIEW_OPTIONS.REVIEW_STATUS_OPTION"
 							/>
 						</n-form-item>
 					</n-gi>
@@ -265,6 +307,26 @@
 								type="text"
 								v-model:value="dataCandidate.occupation"
 								placeholder="Enter Career"
+								size="large"
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
+						<n-form-item label="Facebook" path="facebook">
+							<n-input
+								type="text"
+								v-model:value="dataCandidate.facebook"
+								placeholder="Enter Facebook"
+								size="large"
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
+						<n-form-item label="Line" path="line">
+							<n-input
+								type="text"
+								v-model:value="dataCandidate.line"
+								placeholder="Enter Line"
 								size="large"
 							/>
 						</n-form-item>
@@ -452,6 +514,9 @@
 									size="large"
 									v-model:value="item.formula.id"
 									:override-default-node-click-behavior="override"
+									default-expand-all
+									show-path
+									@update:value="(value, option) => handleUpdateFormula(value, option, index)"
 								/>
 							</n-form-item>
 						</n-gi>
@@ -459,7 +524,7 @@
 							<n-form-item label="Formula Description" path="description">
 								<n-input
 									size="large"
-									v-model="item.formula.description"
+									v-model:value="item.formula.description"
 									placeholder="Pleas Enter Description"
 									disabled
 								/>
@@ -509,13 +574,7 @@ import {
 import { Icon } from "@iconify/vue"
 import moment from "moment"
 
-import type {
-	DataTableColumns,
-	DataTableRowKey,
-	SelectRenderLabel,
-	SelectRenderTag,
-	TreeSelectOverrideNodeClickBehavior
-} from "naive-ui"
+import type { DataTableColumns, DataTableRowKey, TreeSelectOverrideNodeClickBehavior } from "naive-ui"
 import type { FormInst, FormRules } from "naive-ui"
 
 import { PAGE_SIZES, GENDER_OPTIONS, TELEPHONE_OPTIONS } from "@/components/utils/constants"
@@ -525,6 +584,8 @@ import { useCandidateBAStore } from "@/stores/useCandidateBAStore"
 import { useTeamManagementStore } from "@/stores/useTeamManagementStore"
 import _ from "lodash"
 import { useRouter } from "vue-router"
+import { renderMultipleSelectTag, renderLabel } from "@/components/common/SelectNaiveStyle"
+import { useSystemMasterData } from "@/stores/useSystemMasterData"
 
 interface Team {
 	id: number
@@ -540,7 +601,7 @@ interface TeamBrandAdvocacy {
 }
 
 interface BrandAdvocacy {
-	id: number
+	id: number | null
 	candidate_id: number
 	candidate_review_id: number
 	point: number
@@ -569,6 +630,7 @@ interface RowData {
 		is_delete: number
 	}[]
 	candidateFormulas?: { id: number; formula: { brand: { name: string } } }[]
+	candidateReviews?: { id: number; review_status_id: number }[]
 }
 
 export default defineComponent({
@@ -596,6 +658,7 @@ export default defineComponent({
 		const teamManagementStore = useTeamManagementStore()
 		const masterDataStore = useMasterDataStore()
 		const candidateBAStore = useCandidateBAStore()
+		const systemMasterDataStore = useSystemMasterData()
 		const teamOptions = ref<any>([])
 		const dialog = useDialog()
 		const router = useRouter()
@@ -606,17 +669,7 @@ export default defineComponent({
 				value: brand.id
 			}))
 		)
-		const productOption = computed(() =>
-			brands.value.map((brand: any) => ({
-				label: brand.name,
-				key: 0,
-				children: brand.formulas.map((formula: any) => ({
-					label: formula.name,
-					key: formula.id,
-					description: formula.description
-				}))
-			}))
-		)
+		const productOption = ref<any>([])
 		const showModalRef = ref(false)
 		const checkedRowKeysRef = ref<DataTableRowKey[]>([])
 		const formRefCandidate = ref<FormInst | null>(null)
@@ -631,6 +684,7 @@ export default defineComponent({
 			name: ""
 		})
 		const candidateDetail = reactive({
+			id: 0,
 			facebook: "",
 			line: "",
 			telephone: "",
@@ -656,11 +710,20 @@ export default defineComponent({
 					formula_id: 0,
 					formula: {
 						name: null,
-						description: null
+						description: null,
+						brand: { name: null }
 					}
 				}
 			],
-			team: ""
+			team: "",
+			occupation: "",
+			address: "",
+			brandAdvocacys: [
+				{
+					point: 0,
+					id: 0
+				}
+			]
 		})
 		const isModalManagement = reactive({
 			value: false,
@@ -723,9 +786,12 @@ export default defineComponent({
 					is_delete: 0
 				}
 			],
-			team_id: []
+			team_id: [],
+			review_status_id: 0
 		}
-
+		const REVIEW_OPTIONS = reactive({
+			REVIEW_STATUS_OPTION: [{ value: 1, label: "" }]
+		})
 		const dataCandidate = reactive({ ...defaultValue })
 		const column = createColumns()
 
@@ -769,19 +835,22 @@ export default defineComponent({
 					title: "Team",
 					key: "team",
 					width: "250px",
-					className: "whitespace-nowrap truncate",
+					className: "whitespace-nowrap ",
 					render(row: RowData) {
-						const teamNames = row.brandAdvocacys
-							?.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name))
-							.filter((name: string | undefined) => name)
-							.join(", ")
-						return h("div", teamNames || "-")
+						const teamNames = Array.from(
+							new Set(
+								row.brandAdvocacys
+									?.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name))
+									.filter((name: string | undefined) => name)
+							)
+						).join(", ")
+						return h("div", { class: "w-[250px] truncate" }, teamNames || "-")
 					}
 				},
 				{
 					title: "Child Information",
 					key: "childInformation",
-					className: "!text-center ",
+					className: "!text-center whitespace-nowrap",
 					width: "300px",
 					render(row) {
 						return h("div", [h("div", {}, row.childrens.length + " คน")])
@@ -812,6 +881,23 @@ export default defineComponent({
 					}
 				},
 				{
+					title: "Point",
+					key: "point",
+					width: "100px",
+					render(row) {
+						return h(
+							NTag,
+							{
+								class: `whitespace-nowrap truncate !text-blue-500`,
+								size: "medium",
+								round: true,
+								type: "info"
+							},
+							row.brandAdvocacys[0]?.point
+						)
+					}
+				},
+				{
 					title: "Action",
 					key: "action",
 					className: "!text-center",
@@ -823,13 +909,18 @@ export default defineComponent({
 								class: "w-6 h-6 cursor-pointer",
 								onClick: async () => {
 									await candidateBAStore.getCandidateById(row.id)
-									const teamNames = row.brandAdvocacys
-										?.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name))
-										.filter((name: string | undefined) => name)
-										.join(", ")
+									const teamNames = Array.from(
+										new Set(
+											row.brandAdvocacys
+												?.flatMap((ba: any) =>
+													ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name)
+												)
+												.filter((name: string | undefined) => name)
+										)
+									).join(", ")
 
 									Object.assign(candidateDetail, candidateBAStore.candidate, { team: teamNames })
-
+									console.log(candidateDetail)
 									isModalManagement.value = true
 									isModalManagement.event = MODAL_TYPE.VIEW
 								}
@@ -849,9 +940,23 @@ export default defineComponent({
 												}))
 											)
 											.filter((team: any) => team.team_id !== null),
+										birthdate: candidateBAStore.candidate.birthdate
+											? moment(candidateBAStore.candidate.birthdate).valueOf()
+											: null,
 										team_id: row.brandAdvocacys
 											.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.id))
-											.filter((id: any) => id !== null && id !== undefined)
+											.filter((id: any) => id !== null && id !== undefined),
+										review_status_id:
+											candidateBAStore.candidate?.brandAdvocacys[0].review_status_id,
+										candidateFormulas: candidateBAStore.candidate.candidateFormulas.map(
+											(cf: any) => ({
+												...cf,
+												formula: {
+													...cf.formula,
+													id: `_${cf.formula.id}`
+												}
+											})
+										)
 									})
 									isModalManagement.value = true
 									isModalManagement.event = MODAL_TYPE.EDIT
@@ -890,122 +995,12 @@ export default defineComponent({
 			const brand = brands.value.find((b: { id: number }) => b.id === formula_id)
 			return brand ? brand.name : "Unknown Brand"
 		}
-		const rules: FormRules = {
-			firstname: {
-				required: true,
-				message: "Please input First Name",
-				trigger: ["blur", "input"]
-			},
-			lastname: {
-				required: true,
-				message: "Please input Last Name",
-				trigger: ["blur", "input"]
-			},
-			nickname: {
-				required: true,
-				message: "Please input Nickname",
-				trigger: ["blur", "input"]
-			},
-			gender: {
-				required: true,
-				message: "Please select Gender",
-				trigger: ["change"]
-			},
-			birthdate: {
-				required: true,
-				validator: value => {
-					return value !== null && value !== undefined
-				},
-				message: "Please select Birth date",
-				trigger: ["change"]
-			},
-			career: {
-				required: true,
-				trigger: ["blur", "change"],
-				message: "Please input career"
-			},
-			email: {
-				required: true,
-				trigger: ["blur", "change"],
-				message: "Please input email"
-			},
-			telephone: {
-				required: true,
-				trigger: ["blur", "change"],
-				message: "Please input telephone"
-			},
-			is_contactable_telephone: {
-				required: true,
-				trigger: ["change"],
-				validator: value => {
-					return value !== undefined && value !== null
-				},
-				message: "Please select is contactable telephone"
-			},
-			is_contactable_sms: {
-				required: true,
-				trigger: ["change"],
-				validator: value => {
-					return value !== undefined && value !== null
-				},
-				message: "Please select is contactable sms"
-			},
-			address: {
-				required: true,
-				trigger: ["blur", "change"],
-				message: "Please input address"
-			}
-		}
+
 		const override: TreeSelectOverrideNodeClickBehavior = ({ option }) => {
 			if (option.children) {
 				return "toggleExpand"
 			}
 			return "default"
-		}
-		const renderMultipleSelectTag: SelectRenderTag = ({ option, handleClose }) => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true,
-					onClose: e => {
-						e.stopPropagation()
-						handleClose()
-					}
-				},
-				{
-					default: () =>
-						h(
-							"div",
-							{
-								class: "flex items-center text-white"
-							},
-							[option.label as string]
-						)
-				}
-			)
-		}
-		const renderLabel: SelectRenderLabel = option => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true
-				},
-				h(
-					"div",
-					{
-						class: "flex items-center text-white"
-					},
-					[option.label as string]
-				)
-			)
 		}
 		onMounted(async () => {
 			await candidateBAStore.getCandidates({ ...pagination, ...filterApi })
@@ -1021,6 +1016,20 @@ export default defineComponent({
 					is_delete: team.is_delete
 				})
 			)
+			await systemMasterDataStore.getMappingData("review_status_option")
+			Object.assign(
+				REVIEW_OPTIONS.REVIEW_STATUS_OPTION,
+				systemMasterDataStore.mapSystemOptions.review_status_option
+			)
+			productOption.value = brands.value.map((brand: any) => ({
+				label: brand.name,
+				key: brand.id,
+				children: brand.formulas.map((formula: any) => ({
+					label: formula.name,
+					key: `_${formula.id}`,
+					description: formula.description
+				}))
+			}))
 		})
 		watch(pagination, async value => {
 			/// Call API
@@ -1032,38 +1041,38 @@ export default defineComponent({
 			await candidateBAStore.getCandidates({ ...pagination, ...value })
 		})
 		watch(
-      () => dataCandidate.team_id,
-	(newTeamIds: number[], oldTeamIds: number[]) => {
-        // Find removed teams
-        const removedTeams = oldTeamIds.filter((id: number) => !newTeamIds.includes(id))
-        // Find added teams
-        const addedTeams = newTeamIds.filter((id: number) => !oldTeamIds.includes(id))
+			() => dataCandidate.team_id,
+			(newTeamIds: number[], oldTeamIds: number[]) => {
+				// Find removed teams
+				const removedTeams = oldTeamIds.filter((id: number) => !newTeamIds.includes(id))
+				// Find added teams
+				const addedTeams = newTeamIds.filter((id: number) => !oldTeamIds.includes(id))
 
-        // Update dataCandidate.teams
-        dataCandidate.teams = dataCandidate.teams.map(team => {
-		if (team.team_id !== null && removedTeams.includes(team.team_id)) {
-            return {
-			...team,
-			is_active: 0,
-			is_delete: 1
-		}
-          }
-          return team
-        })
+				// Update dataCandidate.teams
+				dataCandidate.teams = dataCandidate.teams.map(team => {
+					if (team.team_id !== null && removedTeams.includes(team.team_id)) {
+						return {
+							...team,
+							is_active: 0,
+							is_delete: 1
+						}
+					}
+					return team
+				})
 
-        // Add new teams
-        addedTeams.forEach(id => {
-          const existingTeam = dataCandidate.teams.find(team => team.team_id === id)
-          if (!existingTeam) {
-            dataCandidate.teams.push({
-              team_id: id,
-              is_active: 1,
-              is_delete: 0
-            })
-          }
-        })
-      }
-    )
+				// Add new teams
+				addedTeams.forEach(id => {
+					const existingTeam = dataCandidate.teams.find(team => team.team_id === id)
+					if (!existingTeam) {
+						dataCandidate.teams.push({
+							team_id: id,
+							is_active: 1,
+							is_delete: 0
+						})
+					}
+				})
+			}
+		)
 
 		const handleSearch = _.debounce((value: string) => {
 			filterApi.name = value
@@ -1156,16 +1165,21 @@ export default defineComponent({
 							is_active: child.is_active,
 							is_delete: child.is_delete
 						})),
-						formulas: dataCandidate.candidateFormulas.map((formula: any) => ({
-							formula_id: formula.formula.brand.id,
-							is_active: formula.formula.is_active,
-							is_delete: formula.formula.is_delete
-						})),
+						formulas: dataCandidate.candidateFormulas.map((formula: any) => {
+							const brandId = String(formula.formula.id)
+							const formulaIdParts = brandId.split("_")
+							return {
+								formula_id: Number(formulaIdParts[1]),
+								is_active: Number(formula.formula.is_active),
+								is_delete: Number(formula.formula.is_delete)
+							}
+						}),
 						teams: dataCandidate.teams.map((team: any) => ({
 							team_id: team.team_id,
 							is_active: team.is_active,
 							is_delete: team.is_delete
-						}))
+						})),
+						review_status_id: dataCandidate.review_status_id
 					}
 					dialog.warning({
 						title: "ยืนยันการแก้ไขข้อมูล",
@@ -1185,7 +1199,19 @@ export default defineComponent({
 					console.error("Validation failed", errors)
 				})
 		}
-
+		const handleUpdateFormula = (value: any, option: any, index: number) => {
+			const formulas = {
+				formula: {
+					id: option.key,
+					brand: { id: option.key, name: null },
+					name: null,
+					description: option.description,
+					is_delete: 0,
+					is_active: 1
+				}
+			}
+			dataCandidate.candidateFormulas[index] = formulas
+		}
 		function reviewAll() {
 			router.push("/workspace")
 		}
@@ -1219,13 +1245,90 @@ export default defineComponent({
 		}
 		const productRules: FormRules = {
 			id: {
-				type: "number",
 				required: true,
 				message: "Please select Product Name",
 				trigger: ["change"]
 			}
 		}
-
+		const rules: FormRules = {
+			firstname: {
+				required: true,
+				message: "Please input First Name",
+				trigger: ["blur", "input"]
+			},
+			lastname: {
+				required: true,
+				message: "Please input Last Name",
+				trigger: ["blur", "input"]
+			},
+			nickname: {
+				required: true,
+				message: "Please input Nickname",
+				trigger: ["blur", "input"]
+			},
+			gender: {
+				required: true,
+				message: "Please select Gender",
+				trigger: ["change"]
+			},
+			birthdate: {
+				required: true,
+				validator: value => {
+					return value !== null && value !== undefined
+				},
+				message: "Please select Birth date",
+				trigger: ["change"]
+			},
+			career: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input career"
+			},
+			email: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input email"
+			},
+			telephone: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input telephone"
+			},
+			is_contactable_telephone: {
+				required: true,
+				trigger: ["change"],
+				validator: value => {
+					return value !== undefined && value !== null
+				},
+				message: "Please select is contactable telephone"
+			},
+			is_contactable_sms: {
+				required: true,
+				trigger: ["change"],
+				validator: value => {
+					return value !== undefined && value !== null
+				},
+				message: "Please select is contactable sms"
+			},
+			address: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input address"
+			},
+			facebook: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input facebook"
+			},
+			line: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input line"
+			}
+		}
+		async function navigateToManagePoint(id:number) {
+			router.push(`/ba/point/${id}`)
+		}
 		return {
 			showModalRef,
 			checkedRowKeysRef,
@@ -1272,7 +1375,10 @@ export default defineComponent({
 			handleCancelCandidateBA,
 			override,
 			teamOptions,
-			TELEPHONE_OPTIONS
+			TELEPHONE_OPTIONS,
+			handleUpdateFormula,
+			REVIEW_OPTIONS,
+			navigateToManagePoint
 		}
 	}
 })

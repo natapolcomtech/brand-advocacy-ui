@@ -1,6 +1,6 @@
 import { defineStore } from "pinia"
 import { ApiService } from "@/services/apiService"
-import type { Incident,Incidents } from "@/types/incidentManagementApi"
+import type { Incident, Incidents } from "@/types/incidentManagementApi"
 
 export const useIncidentManagementStore = defineStore("incidentManagementStore", {
 	state: (): {
@@ -8,6 +8,7 @@ export const useIncidentManagementStore = defineStore("incidentManagementStore",
 		incidents: Incidents
 		teamAndBa: any[]
 		ba: any[]
+		teamAndUser: any
 	} => ({
 		incident: {
 			id: 9,
@@ -34,16 +35,20 @@ export const useIncidentManagementStore = defineStore("incidentManagementStore",
 			created_at: "2024-11-29T04:15:50.000Z",
 			updated_by: "natapol",
 			updated_by_id: 10,
-			updated_at: "2024-11-29T05:02:32.000Z"
+			updated_at: "2024-11-29T05:02:32.000Z",
+			incidentTeams: [],
+			formula: null,
+			date_post: null,
 		},
 		incidents: {
-			data:[],
-			page:"",
-			total:0,
-			limit:"",
+			data: [],
+			page: "",
+			total: 0,
+			limit: ""
 		},
 		teamAndBa: [],
-		ba: []
+		ba: [],
+		teamAndUser:[]
 	}),
 	actions: {
 		async getIncidents(params: any) {
@@ -94,6 +99,30 @@ export const useIncidentManagementStore = defineStore("incidentManagementStore",
 				const resp = await ApiService.v1.Incident.getRandomBa(params)
 				this.ba = resp?.data?.result
 				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async getExportIncident(params?: any) {
+			try {
+				const resp = await ApiService.v1.Incident.getExportIncident(params)
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async getTeamUsers(params: any) {
+			try {
+				const resp = await ApiService.v1.Incident.getTeamUsers(params)
+				this.teamAndUser = resp?.data?.result
+				return resp?.data?.result
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async deleteIncident(id: number) {
+			try {
+				await ApiService.v1.Incident.deleteIncident(id)
 			} catch (error: any) {
 				console.error(error.message_th)
 			}

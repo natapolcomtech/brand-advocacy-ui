@@ -8,11 +8,13 @@ export const useMasterDataStore = defineStore("masterDataStore", {
 		roles: Role[]
 		brands: Formula[]
 		social: Social[]
+		topics: any
 	} => ({
 		capability: [],
 		roles: [],
 		brands: [],
-		social: []
+		social: [],
+		topics: []
 	}),
 	actions: {
 		async getCapability() {
@@ -46,6 +48,15 @@ export const useMasterDataStore = defineStore("masterDataStore", {
 			try {
 				const resp = await ApiService.v1.Master.getSocial()
 				this.social = resp?.data?.data
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async getTopic() {
+			try {
+				const resp = await ApiService.v1.Master.getTopic()
+				this.topics = resp?.data?.result
 				return resp
 			} catch (error: any) {
 				console.error(error.message_th)

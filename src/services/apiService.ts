@@ -28,7 +28,7 @@ const TeamManagement = {
 	createTeamAssignBrand: (data: any) => axios.post("/api/v1user-management/update-team-assign-handle", data),
 	deleteTeamAssignBrand: (data: any) => axios.post("/api/v1/user-management/update-team-unassign-handle", data),
 	postTeamAssign: (data: any) => axios.post("/api/v1/user-management/update-team-assign-handle", data),
-	postTeamUnAssign: (data: any) => axios.post("/api/v1/user-management/update-team-unassign-handle", data),
+	postTeamUnAssign: (data: any) => axios.post("/api/v1/user-management/update-team-unassign-handle", data)
 }
 
 const Master = {
@@ -36,6 +36,7 @@ const Master = {
 	getRole: () => axios.get("/api/v1/master/role"),
 	getBrands: () => axios.get("/api/v1/master/brand"),
 	getSocial: () => axios.get("/api/v1/master/social"),
+	getTopic: () => axios.get("/api/v1/incident-management/topic")
 }
 
 const SystemMasterData = {
@@ -43,6 +44,10 @@ const SystemMasterData = {
 	getSystemMasterData: (params: any) => axios.get("/api/v1/master/system_master_data", { params }),
 	createSystemMasterData: (data: any) => axios.post("/api/v1/master/system_master_data", data),
 	updateSystemMasterData: (data: any) => axios.patch("/api/v1/master/system_master_data", data),
+	getTopicMasterData: (params: any) => axios.get("/api/v1/master/topic_master", { params }),
+	postTopicMasterData: (data: any) => axios.post("/api/v1/master/topic_master", data),
+	updateTopicMasterData: (data: any) => axios.patch("/api/v1/master/topic_master", data),
+	deleteTopicMasterData: (id: number) => axios.delete(`/api/v1/master/topic_master/${id}`)
 }
 
 const Candidate = {
@@ -55,16 +60,24 @@ const Candidate = {
 	getCandidateToReviewMany: (data: any) => axios.post("/api/v1/candidate/init-review-many", data),
 	getCandidateToReviewById: (params: any) => axios.get("/api/v1/candidate/review", { params }),
 	updateCandidateReview: (data: any) => axios.post("/api/v1/candidate/review", data),
+	getCandidateReviewList: () => axios.get("api/v1/candidate/assignee-list"),
+	getCandidateCount: () => axios.get("api/v1/candidate/countAvailable"),
+	getBaManageMent: (params: any) => axios.get("api/v1/candidate/point", { params }),
+	updateBaManageMent: (data: any) => axios.patch("api/v1/candidate/point", data),
 }
 
-const Incident ={
+const Incident = {
 	createIncident: (data: any) => axios.post("/api/v1/incident-management", data),
 	updateIncident: (data: any) => axios.patch("/api/v1/incident-management", data),
 	getIncidents: (params: any) => axios.get("/api/v1/incident-management", { params }),
 	getIncidentById: (id: number) => axios.get(`/api/v1/incident-management/${id}`),
 	getTeamAndBa: () => axios.get("/api/v1/incident-management/team-ba"),
-	getRandomBa: (params:any) => axios.get("/api/v1/incident-management/team-ba-random", { params }),
+	getRandomBa: (params: any) => axios.get("/api/v1/incident-management/team-ba-random", { params }),
+	getExportIncident: (params: any) => axios.get("/api/v1/incident-management/export/", { params }),
+	getTeamUsers: (params: any) => axios.get("/api/v1/incident-management/team-user", { params }),
+	deleteIncident: (id: number) => axios.delete(`/api/v1/incident-management/${id}`),
 }
+
 export const ApiService = {
 	v1: {
 		Auth,

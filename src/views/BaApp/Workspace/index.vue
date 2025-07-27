@@ -2,7 +2,7 @@
 	<div>
 		<h1>Workspace</h1>
 		<n-space class="mb-6 mt-4">
-			<n-input :on-update:value="handleSearch" type="text" placeholder="Search" size="large">
+			<n-input :on-update:value="handleSearch" type="text" placeholder="Search Name , Telephone" size="large">
 				<template #suffix>
 					<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
 				</template>
@@ -38,6 +38,7 @@
 			:columns="columns"
 			:data="candidateBAStore.candidates.data"
 			:checked-row-keys="checkedRowKeysRef"
+			scroll-x-auto
 		/>
 		<n-pagination
 			:item-count="itemCount"
@@ -62,6 +63,7 @@ import { Icon } from "@iconify/vue"
 import { PAGE_SIZES } from "@/components/utils/constants"
 import type { DataTableColumns, DataTableRowKey } from "naive-ui"
 import { useCandidateBAStore } from "@/stores/useCandidateBAStore"
+import { useSystemMasterData } from "@/stores/useSystemMasterData"
 import _ from "lodash"
 import { useRouter } from "vue-router"
 import type { Candidate } from "./workspaceTypes"
@@ -78,6 +80,7 @@ export default defineComponent({
 	},
 	setup() {
 		const candidateBAStore = useCandidateBAStore()
+		const systemMasterDataStore = useSystemMasterData()
 		const router = useRouter()
 		const pagination = reactive({
 			page: 1,
@@ -86,6 +89,9 @@ export default defineComponent({
 		})
 		const filterApi = reactive({
 			name: ""
+		})
+		const REVIEW_OPTIONS = reactive({
+			REVIEW_STATUS_OPTION: [{ value: 1, label: "" }]
 		})
 		const checkedRowKeysRef = ref<DataTableRowKey[]>([])
 
@@ -109,6 +115,7 @@ export default defineComponent({
 					title: "Candidate",
 					key: "candidate",
 					width: "300px",
+					className: "whitespace-nowrap",
 					render(row) {
 						return h("div", { className: "flex gap-2 truncate" }, [
 							h(
@@ -140,14 +147,18 @@ export default defineComponent({
 							.filter((name: string | undefined) => name)
 							.join(", ")
 
-						return h("div", {class:"text-center truncate whitespace-nowrap !max-w-[300px]"},teamNames || "-")
+						return h(
+							"div",
+							{ class: "text-center truncate whitespace-nowrap !max-w-[300px]" },
+							teamNames || "-"
+						)
 					}
 				},
 				{
 					title: "Child Information",
 					key: "childInformation",
-					className: "!text-center",
-					width: "300px",
+					className: "!text-center whitespace-nowrap",
+					width: "200px",
 					render(row) {
 						return h("div", {}, row.childrens.length + " คน")
 					}
@@ -155,9 +166,19 @@ export default defineComponent({
 				{
 					title: "Review Status",
 					key: "status",
-					className: "!text-center",
 					width: "300px",
+					className: "!text-center whitespace-nowrap",
 					render(row) {
+						function getReviewStatusLabel(review_status_id: number) {
+							const statusOption = REVIEW_OPTIONS.REVIEW_STATUS_OPTION.find(
+								option => option.value === review_status_id
+							)
+							return statusOption ? statusOption.label : "No Review"
+						}
+						const reviewStatusLabel =
+							row.candidateReviews.length > 0
+								? getReviewStatusLabel(row.candidateReviews[0].review_status_id)
+								: "No Review"
 						return h("div", { class: "flex gap-x-6 justify-center items-center" }, [
 							h(
 								NButton,
@@ -165,22 +186,21 @@ export default defineComponent({
 									icon: "mdi:eye-outline",
 									class: [
 										"!rounded-full",
-										"!w-24",
 										"!h-6",
 										"!text-center",
 										"!text-white",
 										"!text-xs",
-										row.is_review === 1 ? "!bg-[#FF4500]" : "!bg-[#27B5A3]"
+										row.candidateReviews.length > 0 ? "!bg-[#27B5A3]" : " !bg-[#FF4500]"
 									]
 								},
-								row.is_review === 1 ? "Reviewing" : "Approve"
+								reviewStatusLabel
 							)
 						])
 					}
 				},
 				{
 					title: "Action",
-					className: "!text-center",
+					className: "!text-center whitespace-nowrap",
 					key: "action",
 					render(row) {
 						return h("div", { class: "flex gap-x-6 justify-center items-center" }, [
@@ -222,6 +242,12 @@ export default defineComponent({
 		}, 500)
 		onMounted(async () => {
 			await candidateBAStore.getCandidates({ ...pagination, ...filterApi })
+
+			await systemMasterDataStore.getMappingData("review_status_option")
+			Object.assign(
+				REVIEW_OPTIONS.REVIEW_STATUS_OPTION,
+				systemMasterDataStore.mapSystemOptions.review_status_option
+			)
 		})
 		watch(pagination, async value => {
 			/// Call API
@@ -279,7 +305,8 @@ export default defineComponent({
 			itemCount,
 			initialReview,
 			hasReviewing,
-			reviewCount
+			reviewCount,
+			REVIEW_OPTIONS
 		}
 	}
 })

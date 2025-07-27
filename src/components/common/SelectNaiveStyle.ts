@@ -1,19 +1,36 @@
 import type { SelectRenderTag, SelectRenderLabel } from "naive-ui"
 import { NTag, NButton } from "naive-ui"
 import { h } from "vue"
+const renderLabel: SelectRenderLabel = option => {
+	return h(
+		NButton,
+		{
+			round: true,
+			type: "info",
+			strong: true,
+			size: "small"
+		},
+		h(
+			"div",
+			{
+				class: "flex items-center text-white"
+			},
+			[option.label as string]
+		)
+	)
+}
 const renderMultipleSelectTag: SelectRenderTag = ({ option, handleClose }) => {
 	return h(
-		NTag,
+		NButton,
 		{
-			style: {
-				padding: "10px 20px 10px 20px"
-			},
-			class: "!bg-[#337BE2] ",
 			round: true,
-			onClose: e => {
+			onClose: (e: any) => {
 				e.stopPropagation()
 				handleClose()
-			}
+			},
+			type: "info",
+			strong: true,
+			size: "small"
 		},
 		{
 			default: () =>
@@ -31,11 +48,9 @@ const renderMultipleSelectTagPoint: SelectRenderTag = ({ option, handleClose }) 
 	return h(
 		NTag,
 		{
-			style: {
-				padding: "10px 20px 10px 20px"
-			},
-			class: "!bg-[#337BE2] ",
 			round: true,
+			type: "primary",
+			bordered: false,
 			onClose: e => {
 				e.stopPropagation()
 				handleClose()
@@ -46,7 +61,7 @@ const renderMultipleSelectTagPoint: SelectRenderTag = ({ option, handleClose }) 
 				h(
 					"div",
 					{
-						class: "flex items-center text-white"
+						class: "flex items-center text-black"
 					},
 					[
 						option.label as string,
@@ -56,7 +71,7 @@ const renderMultipleSelectTagPoint: SelectRenderTag = ({ option, handleClose }) 
 								size: "tiny",
 								type: "error",
 								circle: true,
-								class: "!text-[8px] !ml-4 !w-[16px] !h-[16px] !text-center",
+								class: "!text-[8px] !ml-4 !w-[16px] !h-[16px] !text-center ",
 								onClick: e => {
 									e.stopPropagation()
 								}
@@ -70,6 +85,7 @@ const renderMultipleSelectTagPoint: SelectRenderTag = ({ option, handleClose }) 
 		}
 	)
 }
+
 const renderSelectTypeFeedback: SelectRenderTag = ({ option, handleClose }) => {
 	return h(
 		NTag,
@@ -118,37 +134,18 @@ const renderLabelTypeFeedback: SelectRenderLabel = option => {
 		)
 	)
 }
-const renderLabel: SelectRenderLabel = option => {
-	return h(
-		NTag,
-		{
-			style: {
-				padding: "10px 20px 10px 20px"
-			},
-			class: "!bg-[#337BE2] ",
-			round: true
-		},
-		h(
-			"div",
-			{
-				class: "flex items-center text-white"
-			},
-			[option.label as string]
-		)
-	)
-}
+
 const renderLabelCase: SelectRenderLabel = option => {
 	return h(
 		NTag,
 		{
-			style: {
-				padding: "10px 20px 10px 20px"
-			},
 			class: [
-				"flex items-center text-white",
-				option.value === 1 ? "!bg-[#3860FF]" : option.value === 3 ? "!bg-[#FE4C4C]" : "!bg-[#2B405B]"
+				"flex items-center text-white !px-4",
+				option.value === 1 ? "!bg-blue-500 " : option.value === 3 ? "!bg-red-500 " : "!bg-[#2B405B]",
 			].join(" "),
-			round: true
+			round: true,
+			type: option.value === 1 ? "info" : option.value === 3 ? "error" : "success",
+			bordered:false
 		},
 		h(
 			"div",
@@ -163,25 +160,24 @@ const renderSelectCase: SelectRenderTag = ({ option, handleClose }) => {
 	return h(
 		NTag,
 		{
-			style: {
-				padding: "10px 20px"
-			},
 			class: [
-				"flex items-center",
-				option.value === 1 ? "!bg-[#3860FF]" : option.value === 3 ? "!bg-[#FE4C4C]" : "!bg-[#2B405B]"
+				"flex items-center text-white !px-4",
+				option.value === 1 ? "!bg-blue-500 " : option.value === 3 ? "!bg-red-500 " : "!bg-[#2B405B]",
 			].join(" "),
 			round: true,
-			onClose: e => {
+			type: option.value === 1 ? "info" : option.value === 3 ? "error" : "success",
+			onClose: (e:any) => {
 				e.stopPropagation()
 				handleClose()
-			}
+			},
+			bordered:false
 		},
 		{
 			default: () =>
 				h(
 					"div",
 					{
-						class: ["flex items-center text-white"]
+						class: ["flex items-center text-white "]
 					},
 					[option.label as string]
 				)

@@ -1,7 +1,7 @@
 <template>
 	<div class="!bg-white p-4 rounded-lg">
-		<div class="bg-[#FFD984] rounded-xl py-4 px-6 md:flex md:justify-between gap-x-6">
-			<div class="flex gap-4">
+		<div class="bg-[#FFD984] rounded-xl py-4 px-6 flex flex-col-reverse lg:flex-row lg:justify-between gap-x-6 overflow-x-auto">
+			<div class="flex flex-col md:flex-row gap-4">
 				<div class="flex md:inline-block justify-center items-center mb-4 md:mb-0">
 					<n-avatar
 						:size="130"
@@ -58,7 +58,7 @@
 					</n-space>
 				</div>
 			</div>
-			<n-space class="!mt-4 md:mt-0 !flex md:!inline-block gap-4">
+			<n-space class="!mt-4 !flex justify-end ml-auto lg:!inline-block md:mt-0 mb-4 gap-4 ">
 				<n-select
 					class="!w-[250px]"
 					size="large"
@@ -70,7 +70,7 @@
 			</n-space>
 		</div>
 		<h4 class="my-8">แบบฟอร์มสำรวจข้อมูลการติดต่อผู้สมัคร</h4>
-		<n-space>
+		<n-space >
 			<n-space>
 				<n-card
 					@click="isModalManagement.event = MODAL_TYPE.CANDIDATE"
@@ -179,7 +179,7 @@
 			<n-space vertical class="mt-4">
 				<h4 class="mb-2 font-semibold text-[#2073DE]">ทีม :</h4>
 				<span class="flex">
-					<p class="flex flex-col gap-1 pl-5">{{defaultValue.team_name}}</p>
+					<p class="flex flex-col gap-1 pl-5">{{ defaultValue.team_name }}</p>
 				</span>
 			</n-space>
 			<n-space vertical class="mt-4">
@@ -222,38 +222,38 @@
 				<h4 class="mb-2 font-semibold text-[#2E3C52]">ข้อมูลการติดต่อผ่าน Facebook</h4>
 				<n-space vertical class="pl-4">
 					<h5 class="text-[#204486]">เปิดใช้งาน Facebook อายุมากกว่า 1 ปี :</h5>
-					<n-radio-group v-model:value="defaultValue.facebook_age" name="radiogroup">
+					<n-checkbox-group v-model:value="defaultValue.facebook_age" name="radiogroup">
 						<n-space vertical>
-							<n-radio
+							<n-checkbox
 								v-for="item in REVIEW_OPTIONS.FACEBOOK_AGE_OPTION"
 								:key="item.value"
 								:value="item.value"
 								:label="item.label"
 							/>
 						</n-space>
-					</n-radio-group>
+					</n-checkbox-group>
 					<h5 class="text-[#204486] mt-4">มีเพื่อนบน Facebook กว่า 100 คน :</h5>
-					<n-radio-group v-model:value="defaultValue.facebook_trust" name="radiogroup">
+					<n-checkbox-group v-model:value="defaultValue.facebook_trust" name="radiogroup">
 						<n-space vertical>
-							<n-radio
+							<n-checkbox
 								v-for="item in REVIEW_OPTIONS.FACEBOOK_TRUST_OPTION"
 								:key="item.value"
 								:value="item.value"
 								:label="item.label"
 							/>
 						</n-space>
-					</n-radio-group>
+					</n-checkbox-group>
 					<h5 class="text-[#204486] mt-4">มี Facebook มากกว่า 1 Account :</h5>
-					<n-radio-group v-model:value="defaultValue.facebook_response" name="radiogroup">
+					<n-checkbox-group v-model:value="defaultValue.facebook_response" name="radiogroup">
 						<n-space vertical>
-							<n-radio
+							<n-checkbox
 								v-for="item in REVIEW_OPTIONS.FACEBOOK_RESPONSE_OPTION"
 								:key="item.value"
 								:value="item.value"
 								:label="item.label"
 							/>
 						</n-space>
-					</n-radio-group>
+					</n-checkbox-group>
 				</n-space>
 			</n-space>
 		</n-card>
@@ -265,27 +265,16 @@
 		>
 			<n-space vertical class="pl-4">
 				<h5 class="text-[#204486] mt-4">Member :</h5>
-				<n-radio-group v-model:value="defaultValue.line_trust" name="radiogroup">
+				<n-checkbox-group v-model:value="defaultValue.line_trust" name="checkboxgroup">
 					<n-space vertical>
-						<n-radio
+						<n-checkbox
 							v-for="item in REVIEW_OPTIONS.LINE_MEMBER_OPTION"
 							:key="item.value"
 							:value="item.value"
 							:label="item.label"
 						/>
 					</n-space>
-				</n-radio-group>
-				<h5 class="text-[#204486] mt-4">การติดต่อสื่อสาร :</h5>
-				<n-radio-group v-model:value="defaultValue.line_response" name="radiogroup">
-					<n-space vertical>
-						<n-radio
-							v-for="item in REVIEW_OPTIONS.LINE_RESPONSE_OPTION"
-							:key="item.value"
-							:value="item.value"
-							:label="item.label"
-						/>
-					</n-space>
-				</n-radio-group>
+				</n-checkbox-group>
 			</n-space>
 		</n-card>
 		<n-space v-if="isModalManagement.event === MODAL_TYPE.FACEBOOK" vertical class="p-4">
@@ -336,6 +325,8 @@
 				:render-label="renderLabel"
 				:render-tag="renderMultipleSelectTag"
 				:options="teamOptions"
+				filterable
+				multiple
 				class="mt-2"
 			/>
 			<template #footer>
@@ -361,10 +352,12 @@
 			<div class="flex flex-col text-center justify-center items-center">
 				<img src="/images/icon/check-icon.svg" alt="" />
 				<h2>Successfully Review</h2>
-				<p>
-					Semper eget duis at tellus at urna condimentum mattis pellentesque lacus suspendisse faucibus
-					interdum.
-				</p>
+			
+					<p>This candidate already promote to brand advocacy.</p>
+					<p class="text-blue-500 font-bold">
+						If you want to edit futher more please use "BA" menu to proceed
+					</p>
+				
 			</div>
 			<template #footer>
 				<n-space justify="center">
@@ -389,9 +382,10 @@ import {
 	NSelect,
 	NModal,
 	useDialog,
+	NCheckboxGroup,
+	NCheckbox
 } from "naive-ui"
 
-import type { SelectRenderLabel, SelectRenderTag } from "naive-ui"
 import { useMasterDataStore } from "@/stores/useMasterDataStore"
 import { useCandidateBAStore } from "@/stores/useCandidateBAStore"
 import { useTeamManagementStore } from "@/stores/useTeamManagementStore"
@@ -399,6 +393,7 @@ import { useSystemMasterData } from "@/stores/useSystemMasterData"
 import { useRouter } from "vue-router"
 import moment from "moment"
 import { MODAL_TYPE } from "@/views/UserManagement/User/index.vue"
+import { renderMultipleSelectTag, renderLabel } from "@/components/common/SelectNaiveStyle"
 
 interface ReviewDetail {
 	id: number
@@ -427,8 +422,11 @@ export default defineComponent({
 		NCard,
 		NRadio,
 		NRadioGroup,
-		NInput,		NSelect,
+		NInput,
+		NSelect,
 		NModal,
+		NCheckboxGroup,
+		NCheckbox
 	},
 	setup() {
 		const systemMasterDataStore = useSystemMasterData()
@@ -437,7 +435,7 @@ export default defineComponent({
 		const teamManagementStore = useTeamManagementStore()
 		const dialog = useDialog()
 		const teamOptions = ref<any>([])
-		const reviewDetail:ReviewDetail = candidateBAStore.candidate
+		const reviewDetail: ReviewDetail = candidateBAStore.candidate
 		const reviewCheckboxDetail = candidateBAStore.review
 		const router = useRouter()
 		const brands = ref<any>([])
@@ -452,7 +450,7 @@ export default defineComponent({
 			FACEBOOK_TRUST_OPTION: [{ value: 1, label: "" }],
 			FACEBOOK_RESPONSE_OPTION: [{ value: 1, label: "" }],
 			LINE_MEMBER_OPTION: [{ value: 1, label: "" }],
-			LINE_RESPONSE_OPTION: [{ value: 1, label: "" }],
+			// LINE_RESPONSE_OPTION: [{ value: 1, label: "" }],
 			REVIEW_STATUS_OPTION: [{ value: 1, label: "" }],
 			TELEPHONE_OPTIONS: [{ value: 1, label: "" }]
 		})
@@ -479,33 +477,33 @@ export default defineComponent({
 		}
 		const defaultValue = ref({
 			candidate_id: reviewDetail.id,
-			facebook_age: 0,
-			facebook_trust: 0,
-			facebook_response: 0,
+			facebook_age: [] as number[],
+			facebook_trust: [] as number[],
+			facebook_response: [] as number[],
 			facebook_remark: "",
-			line_trust: 0,
-			line_response: 0,
+			line_trust: [] as number[],
+			line_response: [] as number[],
 			line_remark: "",
 			review_status_id: 1,
-			team_id: 0,
-			team_name: "",
-
+			team_id: [],
+			team_name: ""
 		})
 		onMounted(async () => {
 			await masterDataStore.getBrands()
 			await candidateBAStore.getCandidateById(reviewDetail.id)
-			const teamNames = reviewDetail.brandAdvocacys
-				?.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name))
-				.filter((name: string | undefined) => name)
-				.join(", ") || ""
+			const teamNames =
+				reviewDetail.brandAdvocacys
+					?.flatMap((ba: any) => ba.teamBrandAdvocacy.map((tb: any) => tb?.team?.name))
+					.filter((name: string | undefined) => name)
+					.join(", ") || ""
 			defaultValue.value = {
 				candidate_id: reviewDetail.id,
-				facebook_age: Number(reviewCheckboxDetail.facebook_age),
-				facebook_trust: Number(reviewCheckboxDetail.facebook_trust),
-				facebook_response: Number(reviewCheckboxDetail.facebook_response),
+				facebook_age: reviewCheckboxDetail.facebook_age,
+				facebook_trust: reviewCheckboxDetail.facebook_trust,
+				facebook_response: reviewCheckboxDetail.facebook_response,
 				facebook_remark: reviewCheckboxDetail.facebook_remark,
-				line_trust: Number(reviewCheckboxDetail.line_trust),
-				line_response: Number(reviewCheckboxDetail.line_response),
+				line_trust: reviewCheckboxDetail.line_trust,
+				line_response: reviewCheckboxDetail.line_response,
 				line_remark: reviewCheckboxDetail.line_remark,
 				review_status_id: reviewCheckboxDetail.review_status_id,
 				team_id: reviewCheckboxDetail.team_id,
@@ -538,61 +536,11 @@ export default defineComponent({
 			)
 			Object.assign(REVIEW_OPTIONS.LINE_MEMBER_OPTION, systemMasterDataStore.mapSystemOptions.line_member_option)
 			Object.assign(
-				REVIEW_OPTIONS.LINE_RESPONSE_OPTION,
-				systemMasterDataStore.mapSystemOptions.line_response_option
-			)
-			Object.assign(
 				REVIEW_OPTIONS.REVIEW_STATUS_OPTION,
 				systemMasterDataStore.mapSystemOptions.review_status_option
 			)
 			Object.assign(REVIEW_OPTIONS.TELEPHONE_OPTIONS, systemMasterDataStore.mapSystemOptions.telephone_options)
 		})
-
-		const renderMultipleSelectTag: SelectRenderTag = ({ option, handleClose }) => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true,
-					onClose: e => {
-						e.stopPropagation()
-						handleClose()
-					}
-				},
-				{
-					default: () =>
-						h(
-							"div",
-							{
-								class: "flex items-center text-white"
-							},
-							[option.label as string]
-						)
-				}
-			)
-		}
-		const renderLabel: SelectRenderLabel = option => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true
-				},
-				h(
-					"div",
-					{
-						class: "flex items-center text-white"
-					},
-					[option.label as string]
-				)
-			)
-		}
 		async function submitReview() {
 			const data = {
 				...defaultValue.value
@@ -608,7 +556,7 @@ export default defineComponent({
 					onPositiveClick: async () => {
 						await candidateBAStore.updateCandidateReview(data)
 						isModalManagement.value = false
-						router.push("/workspace")
+						router.push("/ba")
 					},
 					onNegativeClick: () => {
 						// message.error("Not Sure")
@@ -640,12 +588,12 @@ export default defineComponent({
 			isModalManagement.team = true
 			setTimeout(() => {
 				isModalManagement.team = false
-				router.push("/workspace")
+				router.push("/ba")
 			}, 3000)
 		}
 		function successReview() {
 			isModalManagement.team = false
-			router.push("/workspace")
+			router.push("/ba")
 		}
 		return {
 			calculateAge,

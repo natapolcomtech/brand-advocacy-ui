@@ -172,6 +172,7 @@ export const INCIDENT_MANAGEMENT = {
 		{ label: "Comment", value: "Comment" }
 	],
 	BA_TYPE_OPTIONS: [
+		{ label: "ไม่ระบุ", value: "ไม่ระบุ" },
 		{ label: "BA Mom", value: "ba_mom" },
 		{ label: "BA HCP", value: "ba_hcp" },
 		{ label: "BA Influencer", value: "ba_influencer" }

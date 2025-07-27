@@ -1,6 +1,6 @@
 import { defineStore } from "pinia"
 import { ApiService } from "@/services/apiService"
-
+import  router  from "@/router"
 import type { Candidate, CandidatesResponse } from "@/types/candidateBAApi"
 
 export const useCandidateBAStore = defineStore("candidateBAStore", {
@@ -8,9 +8,12 @@ export const useCandidateBAStore = defineStore("candidateBAStore", {
 		candidate: Candidate
 		candidates: CandidatesResponse
 		review: any
+		reviewList: any
+		candidateCount:any
+		point: any
 	} => ({
 		candidate: {
-			id: 5,
+			id: 0,
 			nickname: "",
 			firstname: "",
 			lastname: "",
@@ -81,7 +84,40 @@ export const useCandidateBAStore = defineStore("candidateBAStore", {
 						}
 					}
 				}
-			]
+			],
+			candidateReviews: [
+				{
+					id: 53,
+					candidate_id: 0,
+					is_telephone_contactable: 0,
+					is_sms_contactable: 0,
+					facebook_age: "",
+					facebook_trust: "",
+					facebook_response: "",
+					facebook_remark: "",
+					line_trust: "0",
+					line_response: "0",
+					line_remark: "",
+					is_send_link: 0,
+					is_approve_sms: 0,
+					is_approve: 0,
+					approve_by: null,
+					is_reject: 0,
+					reject_reason: null,
+					remark: null,
+					review_status_id: 1,
+					is_draft: 1,
+					is_active: 1,
+					is_delete: 0,
+					created_by_id: 10,
+					created_at: "2024-11-26T01:03:20.000Z",
+					created_by: "natapol",
+					updated_by_id: null,
+					updated_by: null,
+					updated_at: null
+				}
+			],
+			brandAdvocacys: []
 		},
 		candidates: {
 			message: "",
@@ -143,7 +179,16 @@ export const useCandidateBAStore = defineStore("candidateBAStore", {
 			updated_by: null,
 			updated_at: null,
 			brandAdvocacys: []
-		}
+		},
+		reviewList: [],
+		candidateCount: {
+			message: "success",
+			statusCode: 200,
+			count: {
+				total: 0
+			}
+		},
+		point:[]
 	}),
 	actions: {
 		async getCandidates(params: any) {
@@ -161,6 +206,7 @@ export const useCandidateBAStore = defineStore("candidateBAStore", {
 				this.candidate = resp.data.candidate
 				return resp
 			} catch (error: any) {
+				router.push({ name: "NotFound" })
 				console.error(error.message_th)
 			}
 		},
@@ -204,6 +250,40 @@ export const useCandidateBAStore = defineStore("candidateBAStore", {
 		async updateCandidateReview(data: any) {
 			try {
 				await ApiService.v1.Candidate.updateCandidateReview(data)
+			} catch (error: any) {
+				console.error(error)
+			}
+		},
+		async getCandidateReviewList() {
+			try {
+				const resp = await ApiService.v1.Candidate.getCandidateReviewList()
+				this.reviewList = resp?.data?.users
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async getCandidateCount() {
+			try {
+				const resp = await ApiService.v1.Candidate.getCandidateCount()
+				this.candidateCount = resp?.data
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async getBaManageMent(params: any) {
+			try {
+				const resp = await ApiService.v1.Candidate.getBaManageMent(params)
+				this.point = resp?.data
+				return resp
+			} catch (error: any) {
+				console.error(error.message_th)
+			}
+		},
+		async updateBaManageMent(data: any) {
+			try {
+				await ApiService.v1.Candidate.updateBaManageMent(data)
 			} catch (error: any) {
 				console.error(error)
 			}

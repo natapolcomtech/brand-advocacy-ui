@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h1>Incident Payment Detail</h1>
+		<h1>Incident Reward Detail</h1>
 		<n-space class="mb-6 mt-4">
 			<n-input :on-update:value="handleSearch" type="text" placeholder="Search" size="large">
 				<template #suffix>
@@ -8,36 +8,13 @@
 				</template>
 			</n-input>
 		</n-space>
-		<div class="rounded-t-xl bg-[#EAF4FF] w-full py-4 pl-12 pr-6 md:flex justify-between">
-			<span class="flex items-center font-semibold truncate">
-				<p class="text-[#2B405B]">รายการ BA ที่เลือก</p>
-				<p class="text-[#4285F4] ml-2">{{ checkedRowKeysRef.length }} รายการ</p>
-			</span>
-			<span v-if="hasReviewing" class="flex items-center gap-2 font-semibold truncate">
-				<p class="text-red-500 flex items-center font-semibold truncate">มี BA จำนวน</p>
-				<p class="text-red-500 flex items-center font-semibold truncate">{{ reviewCount }}</p>
-				<p class="text-red-500 flex items-center font-semibold truncate">ที่มีสถานะ Reviewing</p>
-			</span>
-
-			<n-space class="flex mt-2 md:mt-0 !justify-end md:block">
-				<n-button
-					@click="initialReview"
-					:type="checkedRowKeysRef.length > 0 ? 'primary' : 'tertiary'"
-					strong
-					:secondary="checkedRowKeysRef.length > 0 ? false : true"
-					:disabled="checkedRowKeysRef.length === 0 || hasReviewing"
-					class="!px-8"
-				>
-					Initial Review
-				</n-button>
-			</n-space>
-		</div>
 		<n-data-table
 			:row-key="rowKey"
 			@update:checked-row-keys="handleCheck"
 			:columns="columns"
 			:data="candidateBAStore.candidates.data"
 			:checked-row-keys="checkedRowKeysRef"
+			scroll-x-auto
 		/>
 		<n-pagination
 			:item-count="itemCount"
@@ -63,7 +40,7 @@ import { PAGE_SIZES } from "@/components/utils/constants"
 import type { DataTableColumns, DataTableRowKey } from "naive-ui"
 import { useCandidateBAStore } from "@/stores/useCandidateBAStore"
 import _ from "lodash"
-import type { Candidate } from "../BaApp/Workspace/workspaceTypes"
+import { useRouter } from "vue-router"
 
 export default defineComponent({
 	name: "Work Space",
@@ -88,7 +65,7 @@ export default defineComponent({
 		const checkedRowKeysRef = ref<DataTableRowKey[]>([])
 
 		const columns = createColumns()
-		function createColumns(): DataTableColumns<Candidate> {
+		function createColumns(): DataTableColumns {
 			return [
 				{
 					title: "No.",
@@ -105,21 +82,7 @@ export default defineComponent({
 					width: "300px",
 					render(row) {
 						return h("div", { className: "flex gap-2 truncate" }, [
-							h(
-								NAvatar,
-								{
-									style: {
-										color: "white",
-										backgroundColor: "skyblue",
-										borderRadius: "100%"
-									}
-								},
-								row.firstname.length > 0 ? row.firstname[0].toUpperCase() : ""
-							),
-							h("div", [
-								h("div", `${row.firstname}  ${row.lastname}`),
-								h("div", { className: "!text-xs mt-1" }, row.email)
-							])
+						
 						])
 					}
 				},

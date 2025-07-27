@@ -10,8 +10,7 @@ const router = createRouter({
 	routes: [
 		{
 			path: "/",
-			name: "BlankPage",
-			component: BlankPage,
+			redirect: "/candidate",
 			meta: { title: "Blank page", auth: true, roles: "all" },
 		},
 		{
@@ -20,7 +19,6 @@ const router = createRouter({
 			component: () => import("@/views/Profile.vue"),
 			meta: { title: "Profile", auth: true, roles: "all" }
 		},
-
 		{
 			path: "/login",
 			name: "Login",
@@ -66,6 +64,12 @@ const router = createRouter({
 			meta: { title: "Candidate", auth: true, }
 		},
 		{
+			path: "/ba/point/:id",
+			name: "point",
+			component: () => import("@/views/BaApp/BA/point.vue"),
+			meta: { title: "Point", auth: true, }
+		},
+		{
 			path: "/ba",
 			name: "ba",
 			component: () => import("@/views/BaApp/BA/index.vue"),
@@ -108,9 +112,15 @@ const router = createRouter({
 			meta: { title: "Role", auth: true }
 		},
 		{
-			path:"/system-master-data",
-			name:"system-master-data",
-			component: () => import("@/views/SystemMasterData/index.vue"),
+			path:"/system-master-data/general-data",
+			name:"general-data",
+			component: () => import("@/views/SystemMasterData/GeneralData/index.vue"),
+			meta: { title: "System Master Data", auth: true }
+		},
+		{
+			path:"/system-master-data/topic-data",
+			name:"topic-data",
+			component: () => import("@/views/SystemMasterData/TopicData/index.vue"),
 			meta: { title: "System Master Data", auth: true }
 		},
 		{

@@ -1,29 +1,74 @@
 <template>
 	<div>
 		<h1>Candidate</h1>
-		<n-space class="mb-6 mt-4">
-			<n-input type="text" placeholder="Search" size="large" :on-update:value="handleSearch">
-				<template #suffix>
-					<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
-				</template>
-			</n-input>
-		</n-space>
+		<div class="mb-6 mt-4 flex flex-col w-full gap-4">
+			<div class="flex flex-col md:flex-row gap-4">
+				<n-input
+					type="text"
+					placeholder="Search Candidate Name , Telephone "
+					size="large"
+					class="md:!w-[535px]"
+					:on-update:value="handleSearch"
+				>
+					<template #suffix>
+						<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
+					</template>
+				</n-input>
+				<n-select
+					:options="TELEPHONE_OPTIONS"
+					v-model:value="filterApi.telephone_status"
+					:render-label="renderLabel"
+					:render-tag="renderMultipleSelectTag"
+					class="md:!w-[260px]"
+					size="large"
+					placeholder="Select Telephone Status"
+					clearable
+				/>
+				<n-select
+					:options="MOCK_OPTIONS_SMS"
+					:render-label="renderLabel"
+					:render-tag="renderMultipleSelectTag"
+					v-model:value="filterApi.sms_status"
+					placeholder="Select SMS Status"
+					class="md:!w-[260px]"
+					size="large"
+					clearable
+				/>
+			</div>
+			<n-space class="!flex !flex-col md:!flex-row !gap-4">
+			<n-date-picker
+				v-model:value="filterApi.date"
+				type="datetimerange"
+				clearable
+				size="large"
+				class="md:!w-[535px]"
+			/>
+			<n-select
+					:options="teamOptions"
+					v-model:value="filterApi.line_group_id"
+					:render-label="renderLabel"
+					:render-tag="renderMultipleSelectTag"
+					class="md:!w-[260px]"
+					size="large"
+					placeholder="Select Line Group"
+					clearable
+				/>
+			</n-space>
+		</div>
 		<div class="rounded-t-xl bg-[#EAF4FF] w-full py-4 pl-12 pr-6 md:flex justify-between">
 			<span class="flex items-center font-semibold truncate">
 				<p class="text-[#2B405B]">รายการ Candidate ที่ได้รับการเลือก</p>
 				<p class="text-[#4285F4] ml-2">{{ checkedRowKeysRef.length }} รายการ</p>
 			</span>
-			<n-space class="md:!flex !justify-end mt-4 md:mt-0">
+			<n-space
+				v-if="checkPermission(['ba-manage-all', 'ba-candidate-review-all', 'ba-candidate-review-brand'])"
+				class="md:!flex !justify-end mt-4 md:mt-0"
+			>
 				<n-button @click="randomReview" type="error">RANDOM REVIEW</n-button>
 				<n-button @click="reviewAll" v-if="checkedRowKeysRef.length > 0" type="primary">REVIEW ALL</n-button>
 			</n-space>
 		</div>
-		<n-data-table
-			:row-key="rowKey"
-			:columns="column"
-			:data="candidateBAStore.candidates.data"
-			@update:checked-row-keys="handleCheck"
-		/>
+		<n-data-table :columns="column" :data="candidateBAStore.candidates.data" scroll-x-auto />
 		<n-pagination
 			:item-count="itemCount"
 			:page-sizes="PAGE_SIZES"
@@ -64,7 +109,7 @@
 					<h2 class="mb-4 text-2xl font-semibold text-[#2E3C52]">
 						{{ candidateDetail.firstname }} {{ candidateDetail.lastname }}
 					</h2>
-					<!-- TODO: รอ api -->
+
 					<div class="flex flex-col gap-1">
 						<span class="md:flex">
 							<p class="md:w-40 font-bold">Facebook</p>
@@ -83,11 +128,12 @@
 							<p class="truncate">: {{ candidateDetail.telephone }}</p>
 						</span>
 					</div>
-					<n-space class="mt-4">
+					<n-space class="my-4">
 						<n-button
 							:type="
+								candidateDetail.is_contactable_telephone !== 1 &&
 								candidateDetail.is_contactable_telephone !== 0 &&
-								candidateDetail.is_contactable_telephone < 4
+								candidateDetail.is_contactable_telephone <= 5
 									? 'info'
 									: 'error'
 							"
@@ -97,7 +143,7 @@
 							{{
 								TELEPHONE_OPTIONS.find(
 									option => option.value === candidateDetail?.is_contactable_telephone
-								)?.label  
+								)?.label
 							}}
 						</n-button>
 						<n-button
@@ -110,6 +156,10 @@
 							}}
 						</n-button>
 					</n-space>
+					<span v-if="candidateDetail.remark" class="md:flex mt-4">
+						<p class="md:w-40 font-bold text-red-500">Remark</p>
+						<p class=" ">: {{ candidateDetail.remark }}</p>
+					</span>
 				</div>
 			</div>
 			<n-card size="medium" class="mt-4 !rounded-xl !border-[#D1D5DB]">
@@ -163,12 +213,6 @@
 						</span>
 					</div>
 				</n-space>
-				<!-- <n-space vertical class="mt-4">
-					<h4 class="mb-2 font-semibold text-[#2073DE]">ทีม :</h4>
-					<span class="flex">
-						
-					</span>
-				</n-space> -->
 				<n-space vertical class="mt-4">
 					<h4 class="mb-2 font-semibold text-[#2073DE] truncate">ยี่ห้อผลิตภัณฑ์ (Product) :</h4>
 					<div v-if="candidateDetail.candidateFormulas.length > 0">
@@ -237,12 +281,13 @@
 						</n-form-item>
 					</n-gi>
 					<n-gi>
-						<n-form-item label="Nickname" path="nickname">
-							<n-input
-								type="text"
-								v-model:value="dataCandidate.nickname"
-								placeholder="Enter Nickname"
+						<n-form-item label="Call Date" path="call_date">
+							<n-date-picker
 								size="large"
+								v-model:value="dataCandidate.call_date"
+								type="date"
+								class="w-full"
+								format="dd/MM/yyyy"
 							/>
 						</n-form-item>
 					</n-gi>
@@ -269,11 +314,34 @@
 						</n-form-item>
 					</n-gi>
 					<n-gi>
-						<n-form-item label="Career" path="occupation">
+						<n-form-item label="Line Group" path="line_group_id">
+							<n-select
+								:options="teamOptions"
+								v-model:value="dataCandidate.line_group_id"
+								:render-label="renderLabel"
+								:render-tag="renderMultipleSelectTag"
+								class="!w-full"
+								size="large"
+								filterable
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
+						<n-form-item label="Facebook" path="facebook">
 							<n-input
 								type="text"
-								v-model:value="dataCandidate.occupation"
-								placeholder="Enter Career"
+								v-model:value="dataCandidate.facebook"
+								placeholder="Enter Facebook"
+								size="large"
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
+						<n-form-item label="Line" path="line">
+							<n-input
+								type="text"
+								v-model:value="dataCandidate.line"
+								placeholder="Enter Line"
 								size="large"
 							/>
 						</n-form-item>
@@ -322,7 +390,17 @@
 							/>
 						</n-form-item>
 					</n-gi>
-					<n-gi span="2">
+					<n-gi>
+						<n-form-item label="Remark" path="remark">
+							<n-input
+								type="textarea"
+								v-model:value="dataCandidate.remark"
+								placeholder="Enter Address"
+								size="large"
+							/>
+						</n-form-item>
+					</n-gi>
+					<n-gi>
 						<n-form-item label="Address" path="address">
 							<n-input
 								type="textarea"
@@ -457,11 +535,12 @@
 						<n-gi>
 							<n-form-item label="Product Name" path="id">
 								<n-tree-select
-									block-line
 									:options="productOption"
 									size="large"
 									v-model:value="item.formula.id"
-									:override-default-node-click-behavior="override"
+									default-expand-all
+									show-path
+									@update:value="(value, option) => handleUpdateFormula(value, option, index)"
 								/>
 							</n-form-item>
 						</n-gi>
@@ -469,7 +548,7 @@
 							<n-form-item label="Formula Description" path="description">
 								<n-input
 									size="large"
-									v-model="item.formula.description"
+									v-model:value="item.formula.description"
 									placeholder="Pleas Enter Description"
 									disabled
 								/>
@@ -506,32 +585,87 @@
 			:title="titleModal"
 		>
 			<n-form ref="formRefRandomCandidate" :model="randomCandidate" :rules="randomCandidateRules">
-				<n-form-item label="Number Candidate" path="number">
-					<n-select
-						size="large"
-						v-model:value="randomCandidate.candidate_amount"
-						placeholder="Pleas Number For Random Candidate"
-						:options="NUMBER_CANDIDATE_OPTIONS"
-						:render-label="renderLabel"
-						:render-tag="renderMultipleSelectTag"
-					/>
+				<n-form-item label="Number Candidate" path="candidate_amount">
+					<span class="w-full">
+						<n-input
+							type="text"
+							size="large"
+							v-model:value="randomCandidate.candidate_amount"
+							placeholder="Pleas Enter Number For Random Candidate"
+							:disabled="candidateBAStore.candidateCount?.count.total === 0"
+						/>
+
+						<small class="text-gray-400">
+							เหลือ Candidate ที่สามารถ Random ได้ {{ candidateBAStore.candidateCount?.count.total }} คน
+						</small>
+					</span>
 				</n-form-item>
-				<!-- <n-form-item label="Assignee candidate" path="candidate">
-					<n-select
-						size="large"
-						v-model="randomCandidate.number"
-						placeholder="Pleas Number For Random Candidate"
-						:render-label="renderLabel"
-						:render-tag="renderMultipleSelectTag"
-						disabled
-						multiple
-					/>
-				</n-form-item> -->
 			</n-form>
 			<template #footer>
 				<n-space justify="end">
 					<n-button @click="handleCancelCandidate" type="default" size="large">Cancel</n-button>
-					<n-button @click="postRandomCandidate" type="primary" size="large">Save</n-button>
+					<n-button
+						v-if="candidateBAStore.candidateCount?.count.total !== 0"
+						@click="postRandomCandidate"
+						type="primary"
+						size="large"
+					>
+						Save
+					</n-button>
+				</n-space>
+			</template>
+		</n-modal>
+
+		<n-modal
+			v-if="isModalManagement.event === MODAL_TYPE.ADD_TEAM"
+			v-model:show="isModalManagement.value"
+			:bordered="false"
+			aria-modal="false"
+			preset="card"
+			size="huge"
+			:style="{
+				width: '800px'
+			}"
+			:title="titleModal"
+			:on-after-leave="handleCancelCandidate"
+		>
+			<n-form ref="formRefReviewCandidate" :model="randomCandidate" :rules="reviewCandidateRules">
+				<n-form-item label="Assign to User" path="assign_user_id">
+					<n-select
+						size="large"
+						v-model:value="randomCandidate.assign_user_id"
+						placeholder="Pleas Assign User"
+						:options="reviewListOption"
+						:render-label="renderLabel"
+						:render-tag="renderMultipleSelectTag"
+					/>
+				</n-form-item>
+				<n-form-item label="Candidate List" path="number">
+					<div class="border rounded-lg w-full h-full px-6 py-2">
+						<span v-for="(item, index) in checkedRowValues" class="flex my-3 items-center gap-x-4">
+							<n-checkbox
+								:checked="checkedRowKeysRef.includes(item.id)"
+								@update:checked="handleCheck(item)"
+								size="large"
+							/>
+							<p class="w-4 text-center">{{ index + 1 }}</p>
+							<div class="flex items-center justify-center gap-x-4">
+								<n-avatar class="!bg-blue-400 !h-8 !w-8 !text-xs !hidden md:!block" round>
+									{{ item.firstname[0].toUpperCase() }}
+								</n-avatar>
+								<div>
+									<p>{{ item.firstname + " " + item.lastname }}</p>
+									<p class="text-xs">{{ item.email }}</p>
+								</div>
+							</div>
+						</span>
+					</div>
+				</n-form-item>
+			</n-form>
+			<template #footer>
+				<n-space justify="end">
+					<n-button @click="handleCancelCandidate" type="default" size="large">Cancel</n-button>
+					<n-button @click="submitReview" type="primary" size="large">Save</n-button>
 				</n-space>
 			</template>
 		</n-modal>
@@ -558,7 +692,8 @@ import {
 	NDatePicker,
 	NAvatar,
 	NTreeSelect,
-	useDialog
+	useDialog,
+	NCheckbox
 } from "naive-ui"
 import { Icon } from "@iconify/vue"
 import moment from "moment"
@@ -566,20 +701,22 @@ import moment from "moment"
 import type {
 	DataTableColumns,
 	DataTableRowKey,
-	SelectRenderLabel,
-	SelectRenderTag,
-	TreeSelectOverrideNodeClickBehavior
+	TreeSelectOverrideNodeClickBehavior,
+	FormInst,
+	FormRules,
+	FormItemRule
 } from "naive-ui"
-import type { FormInst, FormRules } from "naive-ui"
 
-import { PAGE_SIZES, GENDER_OPTIONS, NUMBER_CANDIDATE_OPTIONS } from "@/components/utils/constants"
+import { PAGE_SIZES, GENDER_OPTIONS } from "@/components/utils/constants"
 import { MODAL_TYPE } from "@/views/UserManagement/User/index.vue"
 import { useMasterDataStore } from "@/stores/useMasterDataStore"
 import { useCandidateBAStore } from "@/stores/useCandidateBAStore"
 import { useSystemMasterData } from "@/stores/useSystemMasterData"
 import _ from "lodash"
 import { useRouter } from "vue-router"
-
+import { checkPermission, checkPermissionCandidateView } from "@/utils/auth"
+import { renderMultipleSelectTag, renderLabel } from "@/components/common/SelectNaiveStyle"
+import { useTeamManagementStore } from "@/stores/useTeamManagementStore"
 interface RowData {
 	id: number
 	key?: number
@@ -590,9 +727,13 @@ interface RowData {
 	facebook: string
 	line: string
 	telephone: string
+	remark: string
+	line_group_id: number
 	is_contactable_telephone: number
 	is_contactable_sms: number
 	occupation: string
+	created_at: string
+	call_date: string | null
 	childrens: {
 		id: number
 		firstname: string
@@ -623,12 +764,15 @@ export default defineComponent({
 		NDatePicker,
 		NAvatar,
 		NTreeSelect,
+		NCheckbox,
 		Icon
 	},
 	setup() {
 		const systemMasterDataStore = useSystemMasterData()
 		const masterDataStore = useMasterDataStore()
 		const candidateBAStore = useCandidateBAStore()
+		const teamManagementStore = useTeamManagementStore()
+		const teamOptions = ref<any>([])
 		const dialog = useDialog()
 		const router = useRouter()
 		const brands = ref<any>([])
@@ -638,15 +782,12 @@ export default defineComponent({
 				value: brand.id
 			}))
 		)
-		const productOption = computed(() =>
-			brands.value.map((brand: any) => ({
-				label: brand.name,
-				key: 0,
-				children: brand.formulas.map((formula: any) => ({
-					label: formula.name,
-					key: formula.id,
-					description: formula.description
-				}))
+		const productOption = ref<any>([])
+
+		const reviewListOption = computed(() =>
+			candidateBAStore.reviewList.map((candidate: any) => ({
+				label: candidate.firstname + " " + candidate.lastname,
+				value: candidate.id
 			}))
 		)
 		const override: TreeSelectOverrideNodeClickBehavior = ({ option }) => {
@@ -661,13 +802,20 @@ export default defineComponent({
 		const formRefChild = ref<(FormInst | null)[]>([])
 		const formRefProduct = ref<(FormInst | null)[]>([])
 		const formRefRandomCandidate = ref<FormInst | null>(null)
+		const formRefReviewCandidate = ref<FormInst | null>(null)
+		const isAllChecked = computed(() => checkedRowKeysRef.value.length === candidateBAStore.candidates.data.length)
+		const isIndeterminate = computed(() => checkedRowKeysRef.value.length > 0 && !isAllChecked.value)
 		const pagination = reactive({
 			page: 1,
 			limit: 10,
 			is_available: 1
 		})
 		const filterApi = reactive({
-			name: ""
+			name: "",
+			telephone_status: null,
+			sms_status: null,
+			date: null,
+			line_group_id:null
 		})
 		const candidateDetail = reactive({
 			facebook: "",
@@ -682,6 +830,7 @@ export default defineComponent({
 			is_contactable_sms: 1,
 			occupation: "",
 			address: "",
+			remark: "",
 			childrens: [
 				{
 					id: 0,
@@ -703,8 +852,8 @@ export default defineComponent({
 			]
 		})
 		const randomCandidate = ref({
-			assign_user_id: 0,
-			candidate_amount: 1
+			assign_user_id: null,
+			candidate_amount: null
 		})
 		const isModalManagement = reactive({
 			value: false,
@@ -718,6 +867,8 @@ export default defineComponent({
 					return "Edit Information Candidate"
 				case MODAL_TYPE.RANDOM:
 					return "Random Candidate"
+				case MODAL_TYPE.ADD_TEAM:
+					return "Select Candidate List"
 				default:
 					return ""
 			}
@@ -737,7 +888,10 @@ export default defineComponent({
 			telephone: "",
 			facebook: "",
 			is_contactable_telephone: "",
+			remark: "",
 			is_contactable_sms: "",
+			call_date: null,
+			line_group_id: null,
 			childrens: [
 				{
 					id: 0,
@@ -770,15 +924,51 @@ export default defineComponent({
 		function createColumns(): DataTableColumns<RowData> {
 			return [
 				{
-					type: "selection",
-					width: "50px"
+					title: () =>
+						h(NCheckbox, {
+							checked: isAllChecked.value,
+							indeterminate: isIndeterminate.value,
+							onUpdateChecked: handleCheckAll,
+							disabled: !checkPermission(["ba-manage-all"])
+						}),
+					key: "checkbox",
+					width: "50px",
+					align: "center",
+					render(row: any) {
+						return h("div", { className: "flex justify-center" }, [
+							h(NCheckbox, {
+								checked: checkedRowKeysRef.value.includes(row.id),
+								disabled: !checkPermissionCandidateView(
+									["ba-manage-all", "ba-candidate-review-all", "ba-candidate-review-brand"],
+									row.candidateFormulas.map((cf: any) => cf.formula.brand_id).join()
+								),
+								onUpdateChecked: () => {
+									handleCheck(row)
+								}
+							})
+						])
+					}
 				},
 				{
 					title: "No.",
 					key: "no",
 					width: "50px",
+					className: "whitespace-nowrap",
 					render(row, index) {
 						return h("div", pagination.limit * (pagination.page - 1) + index + 1)
+					}
+				},
+				{
+					title: "Call Date",
+					key: "call_date",
+					width: "50px",
+					className: "whitespace-nowrap ",
+					render(row, index) {
+						return h(
+							"div",
+							{ class: "text-center" },
+							row?.call_date ? moment(row?.call_date).format("DD/MM/YYYY HH:mm") : "-"
+						)
 					}
 				},
 				{
@@ -806,17 +996,14 @@ export default defineComponent({
 					}
 				},
 				{
-					title: "Product Brand Used",
-					key: "brand",
+					title: "Line group",
+					key: "line_group_id",
 					width: "200px",
 					className: "whitespace-nowrap truncate",
 					render(row) {
-						if (row.candidateFormulas && row.candidateFormulas.length > 0) {
-							const brandNames = row.candidateFormulas.map(cf => cf.formula.brand.name)
-							const uniqueBrandNames = [...new Set(brandNames)]
-							return h("div", {}, uniqueBrandNames.join(", "))
-						}
-						return h("div", {}, "-")
+						const teamName =
+							teamOptions.value.find((team: any) => team.value === row.line_group_id)?.label || "-"
+						return h("div", {}, teamName)
 					}
 				},
 				{
@@ -830,7 +1017,7 @@ export default defineComponent({
 				},
 				{
 					title: "Telephone Status​",
-					key: "telephone​",
+					key: "is_contactable_telephone",
 					className: "!text-center  whitespace-nowrap",
 					width: "100px",
 					render(row) {
@@ -838,9 +1025,15 @@ export default defineComponent({
 							TELEPHONE_OPTIONS.find(option => option.value === row?.is_contactable_telephone)?.label ||
 							(row?.is_contactable_telephone === 0 ? "ไม่ระบุ" : "")
 						const type =
-							row.is_contactable_telephone !== 0 && row.is_contactable_telephone < 4 ? "success" : "error"
+							row.is_contactable_telephone !== 1 &&
+							row.is_contactable_telephone !== 0 &&
+							row.is_contactable_telephone <= 5
+								? "success"
+								: "error"
 						const textColorClass =
-							row.is_contactable_telephone !== 0 && row.is_contactable_telephone < 4
+							row.is_contactable_telephone !== 1 &&
+							row.is_contactable_telephone !== 0 &&
+							row.is_contactable_telephone <= 5
 								? "!text-green-500"
 								: "!text-red-500"
 						return h("div", { class: "flex gap-2 justify-center " }, [
@@ -858,48 +1051,107 @@ export default defineComponent({
 					}
 				},
 				{
+					title: "SMS Status",
+					key: "is_contactable_sms",
+					className: "!text-center  whitespace-nowrap",
+					width: "100px",
+					render(row) {
+						return h("div", { class: "flex gap-2 justify-center" }, [
+							row.is_contactable_sms === 1
+								? h(
+										NTag,
+										{
+											class: `whitespace-nowrap truncate `,
+											size: "medium",
+											round: true,
+											type: "success"
+										},
+										h("p", { class: `truncate max-w-32 !text-green-500 }` }, "IS SMS Contactable")
+									)
+								: h(
+										NTag,
+										{
+											class: `whitespace-nowrap truncate `,
+											size: "medium",
+											round: true,
+											type: "error"
+										},
+										h(
+											"p",
+											{ class: `truncate max-w-32 !text-red-500 }` },
+											"Unable to contactable via SMS"
+										)
+									)
+						])
+					}
+				},
+				{
 					title: "Action",
 					key: "action",
 					className: "!text-center",
 					width: "200px",
 					render(row) {
 						return h("div", { class: "flex gap-x-6 justify-center" }, [
-							h(Icon, {
-								icon: "mdi:eye-outline",
-								class: "w-6 h-6 cursor-pointer",
-								onClick: async () => {
-									await candidateBAStore.getCandidateById(row.id)
-									Object.assign(candidateDetail, candidateBAStore.candidate)
-									isModalManagement.value = true
-									isModalManagement.event = MODAL_TYPE.VIEW
-								}
-							}),
-							h(Icon, {
-								icon: "flowbite:edit-outline",
-								class: "w-6 h-6 cursor-pointer",
-								onClick: async () => {
-									await candidateBAStore.getCandidateById(row.id)
-									Object.assign(dataCandidate, {
-										...candidateBAStore.candidate,
-										birthdate: moment(candidateBAStore.candidate.birthdate).valueOf(),
-										childrens: candidateBAStore.candidate.childrens.map((child: any) => ({
-											...child,
-											birthdate: moment(child.birthdate).valueOf()
-										}))
-									})
-									isModalManagement.value = true
-									isModalManagement.event = MODAL_TYPE.EDIT
-								}
-							})
+							checkPermissionCandidateView(
+								["ba-manage-all", "ba-candidate-view-all", "ba-candidate-view-brand"],
+								row.candidateFormulas?.map((cf: any) => cf.formula.brand_id).join() || ""
+							) &&
+								h(Icon, {
+									icon: "mdi:eye-outline",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: async () => {
+										await candidateBAStore.getCandidateById(row.id)
+										Object.assign(candidateDetail, candidateBAStore.candidate)
+										isModalManagement.value = true
+										isModalManagement.event = MODAL_TYPE.VIEW
+									}
+								}),
+							checkPermissionCandidateView(
+								["ba-manage-all", "ba-candidate-edit-all", "ba-candidate-edit-brand"],
+								row.candidateFormulas?.map((cf: any) => cf.formula.brand_id).join() || ""
+							) &&
+								h(Icon, {
+									icon: "flowbite:edit-outline",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: async () => {
+										await candidateBAStore.getCandidateById(row.id)
+										Object.assign(dataCandidate, {
+											...candidateBAStore.candidate,
+											birthdate: candidateBAStore.candidate.birthdate
+												? moment(candidateBAStore.candidate.birthdate).valueOf()
+												: null,
+											call_date: candidateBAStore.candidate.call_date
+												? moment(candidateBAStore.candidate.call_date).valueOf()
+												: null,
+											childrens: candidateBAStore.candidate.childrens.map((child: any) => ({
+												...child,
+												birthdate: child.birthdate ? moment(child.birthdate).valueOf() : null
+											})),
+											candidateFormulas: candidateBAStore.candidate.candidateFormulas.map(
+												(cf: any) => ({
+													...cf,
+													formula: {
+														...cf.formula,
+														id: `_${cf.formula.id}`
+													}
+												})
+											)
+										})
+										isModalManagement.value = true
+										isModalManagement.event = MODAL_TYPE.EDIT
+									}
+								})
 						])
 					}
 				}
 			]
 		}
-		function handleCancelCandidate(e: MouseEvent) {
-			e.preventDefault()
+		function handleCancelCandidate() {
 			Object.assign(dataCandidate, defaultValue)
+			isModalManagement.event = MODAL_TYPE.VIEW
 			isModalManagement.value = false
+			lastCheckedRowValues.value = []
+			checkedRowKeysRef.value = []
 		}
 		function calculateAge(birthdate: any) {
 			const birthdateMoment = moment(birthdate)
@@ -987,71 +1239,79 @@ export default defineComponent({
 				required: true,
 				trigger: ["blur", "change"],
 				message: "Please input address"
+			},
+			facebook: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input facebook"
+			},
+			line: {
+				required: true,
+				trigger: ["blur", "change"],
+				message: "Please input line"
 			}
-		}
-		const renderMultipleSelectTag: SelectRenderTag = ({ option, handleClose }) => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true,
-					onClose: e => {
-						e.stopPropagation()
-						handleClose()
-					}
-				},
-				{
-					default: () =>
-						h(
-							"div",
-							{
-								class: "flex items-center text-white"
-							},
-							[option.label as string]
-						)
-				}
-			)
-		}
-		const renderLabel: SelectRenderLabel = option => {
-			return h(
-				NTag,
-				{
-					style: {
-						padding: "10px 20px 10px 20px"
-					},
-					class: "!bg-[#337BE2] ",
-					round: true
-				},
-				h(
-					"div",
-					{
-						class: "flex items-center text-white"
-					},
-					[option.label as string]
-				)
-			)
 		}
 		const TELEPHONE_OPTIONS = reactive([{ label: "", value: 1 }])
 		onMounted(async () => {
 			await candidateBAStore.getCandidates({ ...pagination, ...filterApi })
 			await masterDataStore.getBrands()
+			await teamManagementStore.getTeamAllEditBA()
+			teamOptions.value = teamManagementStore.teamAllBA.data.map(
+				(team: { id: number; name: string; is_active: number; is_delete: number }) => ({
+					value: team.id,
+					label: team.name,
+					is_active: team.is_active,
+					is_delete: team.is_delete
+				})
+			)
 			brands.value = masterDataStore.brands
+			productOption.value = brands.value.map((brand: any) => ({
+				label: brand.name,
+				key: brand.id,
+				children: brand.formulas.map((formula: any) => ({
+					label: formula.name,
+					key: `_${formula.id}`,
+					description: formula.description
+				}))
+			}))
 			await systemMasterDataStore.getMappingData("telephone_options")
 			Object.assign(TELEPHONE_OPTIONS, systemMasterDataStore.mapSystemOptions.telephone_options)
 		})
-		watch(pagination, async value => {
-			/// Call API
-			await candidateBAStore.getCandidates({ ...value, ...filterApi })
-		})
+		// watch(pagination, async value => {
+		// 	await candidateBAStore.getCandidates({ ...value, ...filterApi })
+		// })
+		// watch(filterApi, async value => {
+		// 	pagination.page = 1
+		// 	/// Call API
+		// 	await candidateBAStore.getCandidates({ ...pagination, ...value })
+		// })
+		function createRequestBody() {
+			const body: any = {
+				...pagination,
+				name: filterApi.name,
+				line_group_id: filterApi.line_group_id,
+				telephone_status: filterApi.telephone_status,
+				sms_status: filterApi.sms_status
+			}
+
+			if (filterApi.date !== null) {
+				body.calldate_startdate = moment(filterApi.date[0]).format("YYYY-MM-DD HH:mm:ss")
+				body.calldate_enddate = moment(filterApi.date[1]).format("YYYY-MM-DD HH:mm:ss")
+			}
+
+			return body
+		}
+
+		async function fetchCandidate() {
+			const body = createRequestBody()
+			await candidateBAStore.getCandidates(body)
+		}
+
 		watch(filterApi, async value => {
 			pagination.page = 1
-			/// Call API
-			await candidateBAStore.getCandidates({ ...pagination, ...value })
+			await fetchCandidate()
 		})
-
+		watch(pagination, fetchCandidate)
 		const handleSearch = _.debounce((value: string) => {
 			filterApi.name = value
 		}, 500)
@@ -1111,78 +1371,108 @@ export default defineComponent({
 		}
 
 		async function reviewAll() {
-			const body = {
-				assign_user_id: 0,
-				candidate_id: checkedRowKeysRef.value
+			if (checkPermission(["ba-manage-all"])) {
+				await candidateBAStore.getCandidateReviewList()
+				isModalManagement.value = true
+				isModalManagement.event = MODAL_TYPE.ADD_TEAM
+			} else {
+				const body = {
+					assign_user_id: 0,
+					candidate_id: checkedRowKeysRef.value
+				}
+				await candidateBAStore.createCandidateToReview(body)
+				router.push("/workspace")
 			}
-			await candidateBAStore.createCandidateToReview(body)
-			router.push("/workspace")
 		}
-
-		function randomReview() {
+		async function submitReview() {
+			formRefReviewCandidate.value?.validate().then(async () => {
+				const body = {
+					assign_user_id: randomCandidate.value.assign_user_id,
+					candidate_id: checkedRowKeysRef.value
+				}
+				await candidateBAStore.createCandidateToReview(body)
+				router.push("/workspace")
+			})
+		}
+		async function randomReview() {
+			await candidateBAStore.getCandidateCount()
 			isModalManagement.value = true
 			isModalManagement.event = MODAL_TYPE.RANDOM
 		}
 		async function postRandomCandidate() {
-			await candidateBAStore.createCandidateToReview(randomCandidate.value)
-			router.push("/workspace")
+			const body = {
+				assign_user_id: 0,
+				candidate_amount: Number(randomCandidate.value.candidate_amount)
+			}
+			formRefRandomCandidate.value?.validate().then(async () => {
+				await candidateBAStore.createCandidateToReview(body)
+				router.push("/workspace")
+			})
 		}
 		function handleEditCandidate(e: MouseEvent) {
 			e.preventDefault()
 
-			// รวบรวมการ validate ของทุกฟอร์มใน Promise.all
-			Promise.all([
-				formRefCandidate.value?.validate(),
-				...formRefChild.value.map(form => form?.validate()),
-				...formRefProduct.value.map(form => form?.validate())
-			])
-				.then(() => {
-					const formateBody = {
-						id: dataCandidate.id,
-						nickname: dataCandidate.nickname,
-						firstname: dataCandidate.firstname,
-						lastname: dataCandidate.lastname,
-						gender: dataCandidate.gender,
-						email: dataCandidate.email,
-						facebook: dataCandidate.facebook,
-						telephone: dataCandidate.telephone,
-						line: dataCandidate.line,
-						is_contactable_telephone: dataCandidate.is_contactable_telephone,
-						is_contactable_sms: dataCandidate.is_contactable_sms,
-						occupation: dataCandidate.occupation,
-						address: dataCandidate.address,
-						birthdate: moment(dataCandidate.birthdate).format("YYYY-MM-DD"),
-						childs: dataCandidate.childrens.map((child: any) => ({
-							id: child.id,
-							nickname: child.nickname,
-							firstname: child.firstname,
-							lastname: child.lastname,
-							gender: child.gender,
-							birthdate: moment(child.birthdate).format("YYYY-MM-DD"),
-							is_active: child.is_active,
-							is_delete: child.is_delete
-						})),
-						formulas: dataCandidate.candidateFormulas.map((formula: any) => ({
-							formula_id: formula.formula.brand.id,
-							is_active: formula.formula.is_active,
-							is_delete: formula.formula.is_delete
-						}))
+			const formateBody = {
+				id: dataCandidate.id,
+				call_date: moment(dataCandidate.call_date).format("YYYY-MM-DD HH:mm:ss"),
+				line_group_id: dataCandidate.line_group_id,
+				firstname: dataCandidate.firstname,
+				lastname: dataCandidate.lastname,
+				gender: dataCandidate.gender,
+				email: dataCandidate.email,
+				facebook: dataCandidate.facebook,
+				telephone: dataCandidate.telephone,
+				line: dataCandidate.line,
+				is_contactable_telephone: dataCandidate.is_contactable_telephone,
+				is_contactable_sms: dataCandidate.is_contactable_sms,
+				address: dataCandidate.address,
+				remark: dataCandidate.remark,
+				birthdate: moment(dataCandidate.birthdate).format("YYYY-MM-DD"),
+				childs: dataCandidate.childrens.map((child: any) => ({
+					id: child.id,
+					nickname: child.nickname,
+					firstname: child.firstname,
+					lastname: child.lastname,
+					gender: child.gender,
+					birthdate: moment(child.birthdate).format("YYYY-MM-DD"),
+					is_active: child.is_active,
+					is_delete: child.is_delete
+				})),
+				formulas: dataCandidate.candidateFormulas.map((formula: any) => {
+					const brandId = String(formula.formula.id)
+					const formulaIdParts = brandId.split("_")
+					return {
+						formula_id: Number(formulaIdParts[1]),
+						is_active: Number(formula.formula.is_active),
+						is_delete: Number(formula.formula.is_delete)
 					}
-					dialog.warning({
-						title: "ยืนยันการแก้ไขข้อมูล",
-						content: `ข้อมูลของผู้ใช้ ${dataCandidate.firstname} ${dataCandidate.lastname} หรือไม่ ?`,
-						positiveText: "แน่ใจ",
-						negativeText: "ยกเลิก",
-						onPositiveClick: async () => {
-							pagination.page = 1
-							await candidateBAStore.updateCandidate(formateBody)
-							isModalManagement.value = false
-						}
-					})
 				})
-				.catch(errors => {
-					console.error("Validation failed", errors)
-				})
+			}
+			dialog.warning({
+				title: "ยืนยันการแก้ไขข้อมูล",
+				content: `ข้อมูลของผู้ใช้ ${dataCandidate.firstname} ${dataCandidate.lastname} หรือไม่ ?`,
+				positiveText: "แน่ใจ",
+				negativeText: "ยกเลิก",
+				onPositiveClick: async () => {
+					await candidateBAStore.updateCandidate(formateBody)
+					await candidateBAStore.getCandidates({ ...pagination, ...filterApi })
+					isModalManagement.value = false
+				}
+			})
+		}
+
+		const handleUpdateFormula = (value: any, option: any, index: number) => {
+			const formulas = {
+				formula: {
+					id: option.key,
+					brand: { id: option.key, name: null },
+					name: null,
+					description: option.description,
+					is_delete: 0,
+					is_active: 1
+				}
+			}
+			dataCandidate.candidateFormulas[index] = formulas
 		}
 
 		const childRules: FormRules = {
@@ -1215,7 +1505,6 @@ export default defineComponent({
 		}
 		const productRules: FormRules = {
 			id: {
-				type: "number",
 				required: true,
 				message: "Please select Product Name",
 				trigger: ["change"]
@@ -1223,23 +1512,62 @@ export default defineComponent({
 		}
 		const randomCandidateRules: FormRules = {
 			candidate_amount: {
+				required: true,
+				message: "Please Enter Number of Candidates",
+				trigger: ["input", "blur"],
+				validator: (rule: FormItemRule, value: string) => {
+					if (!/^\d+$/.test(value)) {
+						return new Error("กรุณากรอกเฉพาะตัวเลขเท่านั้น")
+					}
+					return true
+				}
+			}
+		}
+		const reviewCandidateRules: FormRules = {
+			assign_user_id: {
 				type: "number",
 				required: true,
-				message: "Please select Number of Candidates",
+				message: "Please select Assign User",
 				trigger: ["change"]
 			}
 		}
+		const lastCheckedRowValues = ref<any>([])
+		const checkedRowValues = computed(() => {
+			if (isModalManagement.event === MODAL_TYPE.ADD_TEAM) {
+				return lastCheckedRowValues.value
+			} else {
+				const values = checkedRowKeysRef.value
+					.map(key => candidateBAStore.candidates.data.find(row => row.id === key))
+					.filter(row => row !== undefined)
+				return values
+			}
+		})
+		watch(checkedRowValues, async newValues => {
+			if (isModalManagement.event !== MODAL_TYPE.ADD_TEAM) {
+				lastCheckedRowValues.value = await Promise.resolve(newValues)
+			}
+		})
+		const handleCheck = (rowKey: any) => {
+			if (checkedRowKeysRef.value.includes(rowKey.id)) {
+				checkedRowKeysRef.value = checkedRowKeysRef.value.filter(key => key !== rowKey.id)
+			} else {
+				checkedRowKeysRef.value.push(rowKey.id)
+			}
+		}
 
+		function handleCheckAll(checked: boolean) {
+			if (checked) {
+				checkedRowKeysRef.value = candidateBAStore.candidates.data.map(row => row.id)
+			} else {
+				checkedRowKeysRef.value = []
+			}
+		}
 		return {
 			showModalRef,
 			checkedRowKeysRef,
-			rowKey: (row: RowData) => row.id,
-			handleCheck(rowKeys: DataTableRowKey[]) {
-				checkedRowKeysRef.value = rowKeys
-			},
+			handleCheck,
 			column,
 			PAGE_SIZES,
-			NUMBER_CANDIDATE_OPTIONS,
 			isModalManagement,
 			pagination,
 			titleModal,
@@ -1281,7 +1609,16 @@ export default defineComponent({
 			postRandomCandidate,
 			handleEditCandidate,
 			override,
-			TELEPHONE_OPTIONS
+			TELEPHONE_OPTIONS,
+			checkPermission,
+			handleUpdateFormula,
+			checkedRowValues,
+			submitReview,
+			reviewListOption,
+			reviewCandidateRules,
+			formRefReviewCandidate,
+			filterApi,
+			teamOptions
 		}
 	}
 })

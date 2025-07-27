@@ -30,7 +30,6 @@ onMounted(() => {
 	const firstWorldFirstName = getFirstName.charAt(0).toUpperCase()
 	const firstWorldLastName = getLastName.charAt(0).toUpperCase()
 	nameAvatar.value = `${firstWorldFirstName}${firstWorldLastName}`
-	console.log("Avatar mounted")
 })
 const options = ref([
 	{

@@ -214,7 +214,45 @@ export interface Candidate {
 	is_review: number
 	childrens: Child[]
 	candidateFormulas: CandidateFormula[]
+	candidateReviews?: CandidateReviewItem[]
+	brandAdvocacys:any[]
+	call_date?:string
 }
+
+export interface CandidateReviewItem {
+	id: number;
+	candidate_id: number;
+	is_telephone_contactable: number;
+	is_sms_contactable: number;
+	facebook_age: string;
+	facebook_trust: string;
+	facebook_response: string;
+	facebook_remark: string;
+	line_trust: string;
+	line_response: string;
+	line_remark: string;
+	is_send_link: number;
+	is_approve_sms: number;
+	is_approve: number;
+	approve_by: number | null;
+	is_reject: number;
+	reject_reason: string | null;
+	remark: string | null;
+	review_status_id: number;
+	is_draft: number;
+	is_active: number;
+	is_delete: number;
+	created_by_id: number;
+	created_at: string;
+	created_by: string;
+	updated_by_id: number | null;
+	updated_by: string | null;
+	updated_at: string | null;
+  }
+  
+  export interface CandidateReview {
+	candidateReviews: CandidateReviewItem[];
+  }
 
 export interface CandidatesResponse {
 	message: string

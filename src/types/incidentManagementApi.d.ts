@@ -128,7 +128,10 @@ export interface Incident {
 	updated_by: string
 	updated_by_id: number
 	updated_at: string
-	incidentBrandAdvocacys: IncidentBrandAdvocacy[]
+	incidentBrandAdvocacys: IncidentBrandAdvocacy[],
+	incidentTeams:any[],
+	formula: any,
+	date_post: string | null
 }
 
 export interface IncidentBrandAdvocacy {

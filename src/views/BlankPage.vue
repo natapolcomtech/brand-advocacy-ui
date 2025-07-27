@@ -14,9 +14,9 @@ export default defineComponent({
 			password: "chanpradab"
 		}
 
-		onMounted(async () => {
-			await authApiStore.login(autoLogin)
-		})
+		// onMounted(async () => {
+		// 	await authApiStore.login(autoLogin)
+		// })
 		return {}
 	}
 })

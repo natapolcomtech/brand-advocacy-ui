@@ -2,12 +2,18 @@
 	<div>
 		<h1>User</h1>
 		<div class="mb-6 mt-4 flex flex-col md:flex-row justify-between gap-4">
-			<n-input  type="text" placeholder="Search" size="large" :on-update:value="handleSearch" class="md:!w-[260px]">
+			<n-input
+				type="text"
+				placeholder="Search"
+				size="large"
+				:on-update:value="handleSearch"
+				class="md:!w-[260px]"
+			>
 				<template #suffix>
 					<Icon icon="majesticons:search-line" style="color: #d1d1d1" width="24" />
 				</template>
 			</n-input>
-			<n-button @click="handleCreateUser" type="primary" size="large">
+			<n-button v-if="checkPermission(['um-manage-all'])" @click="handleCreateUser" type="primary" size="large">
 				<template #icon>
 					<Icon icon="icons8:plus" />
 				</template>
@@ -15,11 +21,7 @@
 			</n-button>
 		</div>
 
-		<n-data-table
-			:row-key="rowKey"
-			:columns="column"
-			:data="userManagementStore.users.data"
-		/>
+		<n-data-table :row-key="rowKey" :columns="column" :data="userManagementStore.users.data" scroll-x-auto/>
 		<n-pagination
 			:item-count="itemCount"
 			:page-sizes="PAGE_SIZES"
@@ -54,6 +56,15 @@
 				<n-form-item label="Password" path="password">
 					<n-input
 						v-model:value="dataUser.password"
+						size="large"
+						type="password"
+						show-password-on="click"
+						placeholder="********"
+					/>
+				</n-form-item>
+				<n-form-item label="Confirm Password" path="confirmPassword">
+					<n-input
+						v-model:value="dataUser.confirmPassword"
 						size="large"
 						type="password"
 						show-password-on="click"
@@ -164,10 +175,11 @@ import type { User } from "@/types/userManagementApi"
 import type { DataTableColumns } from "naive-ui"
 import { useUserManagementStore } from "@/stores/userManagementStore"
 import { useMasterDataStore } from "@/stores/useMasterDataStore"
-import type { FormInst, FormRules } from "naive-ui"
+import type { FormInst, FormRules, FormItemRule } from "naive-ui"
 import { useDialog } from "naive-ui"
 import _ from "lodash"
 import { PAGE_SIZES } from "@/components/utils/constants"
+import { checkPermission } from "@/utils/auth"
 interface RowData {
 	id: number
 }
@@ -181,6 +193,7 @@ export enum MODAL_TYPE {
 	FACEBOOK = "facebook",
 	LINE = "line",
 	TEAM = "team",
+	ADD_TEAM = "add_team"
 }
 
 export default defineComponent({
@@ -227,7 +240,7 @@ export default defineComponent({
 		})
 		const pagination = reactive({
 			page: 1,
-			limit: 10,
+			limit: 10
 		})
 		const filterApi = reactive({
 			filter: ""
@@ -249,6 +262,7 @@ export default defineComponent({
 			email: "",
 			username: "",
 			password: "",
+			confirmPassword: "",
 			firstname: "",
 			lastname: "",
 			role_id: null,
@@ -343,7 +357,7 @@ export default defineComponent({
 								},
 								row.firstname[0].toUpperCase()
 							),
-							h("div",  [
+							h("div", [
 								h("div", `${row.firstname}  ${row.lastname}`),
 								h("div", { className: "!text-xs mt-1" }, row.email)
 							])
@@ -354,18 +368,21 @@ export default defineComponent({
 					title: "Team",
 					key: "teams",
 					width: "350px",
-					align: "center"
+					align: "center",
+					className: "whitespace-nowrap",
 				},
 				{
 					title: "Role",
 					key: "role_name",
 					align: "center",
-					width: "250px"
+					width: "250px",
+					className: "whitespace-nowrap",
 				},
 				{
 					title: "Action",
 					key: "action",
-					className: "!text-center",
+					width: "200px",
+					className: "!text-center whitespace-nowrap",
 					render(row) {
 						return h("div", { class: "flex gap-x-2 justify-center" }, [
 							h(Icon, {
@@ -389,6 +406,7 @@ export default defineComponent({
 									isModalManagement.event = MODAL_TYPE.VIEW
 								}
 							}),
+							checkPermission(['um-manage-all','um-user-edit-all','um-user-edit-team']) &&
 							h(Icon, {
 								icon: "flowbite:edit-outline",
 								class: " cursor-pointer w-6 h-6",
@@ -410,47 +428,49 @@ export default defineComponent({
 									isModalManagement.event = MODAL_TYPE.EDIT
 								}
 							}),
-							h(Icon, {
-								icon: "mdi:shield-key-outline",
-								class: "w-6 h-6 cursor-pointer",
-								onClick: async (e: MouseEvent) => {
-									e.preventDefault()
-									await userManagementStore.getUserById(row.id)
-									const { email, username, password, firstname, lastname, role_id, id } =
-										userManagementStore.user
-									Object.assign(dataUser, {
-										email,
-										username,
-										password,
-										firstname,
-										lastname,
-										role_id,
-										id,
-										name: `${firstname} ${lastname}`,
-										user_capabilitys: userManagementStore.user.user_capabilitys
-									})
-									isModalManagement.value = true
-									isModalManagement.event = MODAL_TYPE.PERMISSION
-								}
-							}),
-							h(Icon, {
-								icon: "tabler:trash",
-								class: " cursor-pointer w-6 h-6",
-								onClick: () => {
-									dialog.warning({
-										title: "ยืนยันการลบข้อมูล",
-										content: `ข้อมูลที่ลบจะไม่สามารถกู้คืนได้ คุณแน่ใจที่จะลบข้อมูลผู้ใช้ ${row.firstname}  ${row.lastname} หรือไม่ ?`,
-										positiveText: "แน่ใจ",
-										negativeText: "ยกเลิก",
-										onPositiveClick: async () => {
-											await userManagementStore.deleteUserById(row.id, pagination)
-										},
-										onNegativeClick: () => {
-											// message.error("Not Sure")
-										}
-									})
-								}
-							})
+							checkPermission(["um-manage-all"]) &&
+								h(Icon, {
+									icon: "mdi:shield-key-outline",
+									class: "w-6 h-6 cursor-pointer",
+									onClick: async (e: MouseEvent) => {
+										e.preventDefault()
+										await userManagementStore.getUserById(row.id)
+										const { email, username, password, firstname, lastname, role_id, id } =
+											userManagementStore.user
+										Object.assign(dataUser, {
+											email,
+											username,
+											password,
+											firstname,
+											lastname,
+											role_id,
+											id,
+											name: `${firstname} ${lastname}`,
+											user_capabilitys: userManagementStore.user.user_capabilitys
+										})
+										isModalManagement.value = true
+										isModalManagement.event = MODAL_TYPE.PERMISSION
+									}
+								}),
+							checkPermission(["um-manage-all"]) &&
+								h(Icon, {
+									icon: "tabler:trash",
+									class: " cursor-pointer w-6 h-6",
+									onClick: () => {
+										dialog.warning({
+											title: "ยืนยันการลบข้อมูล",
+											content: `ข้อมูลที่ลบจะไม่สามารถกู้คืนได้ คุณแน่ใจที่จะลบข้อมูลผู้ใช้ ${row.firstname}  ${row.lastname} หรือไม่ ?`,
+											positiveText: "แน่ใจ",
+											negativeText: "ยกเลิก",
+											onPositiveClick: async () => {
+												await userManagementStore.deleteUserById(row.id, pagination)
+											},
+											onNegativeClick: () => {
+												// message.error("Not Sure")
+											}
+										})
+									}
+								})
 						])
 					}
 				}
@@ -466,15 +486,15 @@ export default defineComponent({
 			const isHaveItem = dataUser.user_capabilitys.find((i: any) => i.capability_id === item.id)
 
 			if (!isHaveItem) {
-				(dataUser.user_capabilitys as any).push({ capability_id: item.id, is_delete: 0, is_active: 1 } as any)
+				;(dataUser.user_capabilitys as any).push({ capability_id: item.id, is_delete: 0, is_active: 1 } as any)
 			} else {
 				const index = dataUser.user_capabilitys.findIndex((capability: any) => {
 					return capability.capability_id === item.id
 				})
 
 				if (index > -1) {
-					(dataUser.user_capabilitys[index] as any).is_active = checked ? 1 : 0;
-					(dataUser.user_capabilitys[index] as any).is_delete = checked ? 0 : 1;
+					(dataUser.user_capabilitys[index] as any).is_active = checked ? 1 : 0 ;
+					(dataUser.user_capabilitys[index] as any).is_delete = checked ? 0 : 1
 				}
 			}
 		}
@@ -506,7 +526,8 @@ export default defineComponent({
 			username: {
 				required: true,
 				trigger: ["blur", "input"],
-				message: "Please input Username"
+				message: "Please input Username",
+				min: 4
 			},
 			firstname: {
 				required: true,
@@ -525,18 +546,43 @@ export default defineComponent({
 				type: "number"
 			},
 			password: {
-				required: true,
+				required: isModalManagement.event === MODAL_TYPE.CREATE,
 				trigger: ["blur", "input"],
-				message: "Please input Password",
-				max: 16,
-				min:8,
+				validator: (rule: FormItemRule, value: any) => {
+					if (isModalManagement.event === MODAL_TYPE.CREATE) {
+						if (!value) {
+							return new Error("Please input Password")
+						}
+					}
+					if (value && value.length > 0 && (value.length < 8 || value.length > 16)) {
+						return new Error("Password must be between 8 and 16 characters")
+					}
+					return true
+				}
+			},
+			confirmPassword: {
+				required: isModalManagement.event === MODAL_TYPE.CREATE,
+				trigger: ["blur", "input"],
+				validator: (rule: FormItemRule, value: any) => {
+					if (isModalManagement.event === MODAL_TYPE.CREATE) {
+						if (!value) {
+							return new Error("Please input Confirm Password")
+						}
+					}
+					if (value && value.length > 0 && value !== dataUser.password) {
+						return new Error("Passwords do not match")
+					}
+					if (value && value.length > 0 && (value.length < 8 || value.length > 16)) {
+						return new Error("Password must be between 8 and 16 characters")
+					}
+					return true
+				}
 			}
 		}
 
 		const handleSearch = _.debounce((value: string) => {
 			filterApi.filter = value
 		}, 500)
-
 
 		return {
 			rowKey: (row: RowData) => row.id,
@@ -562,7 +608,8 @@ export default defineComponent({
 			submitSaveEditRole,
 			MODAL_TYPE,
 			paginateCount,
-			handleSearch
+			handleSearch,
+			checkPermission
 		}
 	}
 })
