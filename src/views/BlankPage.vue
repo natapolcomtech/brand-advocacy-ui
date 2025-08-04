@@ -1,5 +1,5 @@
 <template>
-	<div class="page">Hi, this is a blank page.</div>
+	<div class="page">Underconstruction.</div>
 </template>
 <script>
 import { defineComponent, onMounted } from "vue"
